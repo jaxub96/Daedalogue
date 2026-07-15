@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gothic Dialog Generator — Parchment Edition
+Gothic Dialog Generator — Minimal Edition
 All visual design is defined in the THEME block below. Nothing else in the
 file contains hard-coded colors, font names, or sizes.
 """
@@ -14,80 +14,24 @@ from PyQt6.QtWidgets import (
     QSpinBox, QCheckBox, QComboBox, QSplitter, QTabWidget,
     QMessageBox, QFileDialog, QGroupBox,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat, QPalette
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════=
 #  THEME  —  change everything visual here, nowhere else
-# ══════════════════════════════════════════════════════════════════════════════
-
-THEME = {
-    # ── Colors ────────────────────────────────────────────────────────────────
-    # Backgrounds (light → dark)
-    "bg_main":          "#f5edd6",   # window / editor background
-    "bg_panel":         "#ede0c0",   # sidebar, group boxes
-    "bg_bar":           "#e0ceaa",   # top bar, item hover
-    "bg_border":        "#c9b68a",   # borders, separators, scrollbar handle
-    "bg_input":         "#d8ccb8",   # text field / spinbox background
-    "bg_input_border":  "#c8bca0",   # text field border
-    "bg_code":          "#faf4e4",   # code preview background
-    "bg_choice":        "#eee8d0",   # choice row background
-    "bg_choice_input":  "#f0ead8",   # choice label input
-
-    # Text
-    "text_primary":     "#2e1f0e",   # main body text
-    "text_secondary":   "#5a3e28",   # labels, secondary
-    "text_muted":       "#9a7d5a",   # placeholders, inactive
-
-    # Accents
-    "accent_primary":   "#8b3a1a",   # rust red  — active, selected, export btn
-    "accent_hover":     "#c05a30",   # lighter rust for hover
-    "accent_secondary": "#4a5e35",   # moss green — choices, log
-    "accent_gold":      "#a07820",   # gold       — group box titles
-
-    # Syntax highlighting (code preview only)
-    "syn_keyword":      "#7a2010",   # instance / func / void …
-    "syn_type":         "#5a3e80",   # C_INFO / TRUE / LOG_* …
-    "syn_function":     "#1a5a30",   # AI_Output / B_GiveXP …
-    "syn_string":       "#7a5010",   # "quoted strings"
-    "syn_comment":      "#9a8060",   # // comments
-    "syn_number":       "#1a407a",   # numeric literals
-
-    # ── Typography ────────────────────────────────────────────────────────────
-    "font_ui":          "Georgia, serif",          # all UI chrome
-    "font_code":        "Cascadia Code, Consolas, monospace",  # code preview
-    "font_size_ui":     "12px",
-    "font_size_small":  "11px",
-    "font_size_tiny":   "9px",
-    "font_size_title":  "16px",
-    "font_size_placeholder": "17px",
-    "font_size_code":   10,          # pt, used for QFont object
-
-    # ── Geometry ──────────────────────────────────────────────────────────────
-    "radius_sm":        "3px",
-    "radius_md":        "4px",
-    "radius_lg":        "6px",
-    "border_width":     "1px",
-    "topbar_height":    56,
-    "sidebar_width":    204,
-    "splitter_sizes":   [204, 530, 480],
-    "window_size":      (1280, 840),
-
-    # ── Spacing ───────────────────────────────────────────────────────────────
-    "label_col_width":  "44px",      # left-column label width in editor rows
-}
+# ═════════════════════════════════════════════════════════════════════════════=
+from theme import THEME
 
 # ── Derived stylesheet fragments (built once from THEME, used everywhere) ─────
-# These are the only place that translates THEME values into Qt stylesheet text.
 
 def _ss_field():
     t = THEME
     return (
         f"QLineEdit {{ background:{t['bg_input']}; color:{t['text_primary']}; "
         f"  border:{t['border_width']} solid {t['bg_input_border']}; "
-        f"  border-radius:{t['radius_sm']}; padding:4px 8px; "
-        f"  selection-background-color:{t['accent_hover']}; "
+        f"  border-radius:{t['radius_sm']}; padding:5px 8px; "
+        f"  selection-background-color:{t['accent_primary']}; "
         f"  font-family:{t['font_ui']}; }}"
         f"QLineEdit:focus {{ border:{t['border_width']} solid {t['accent_primary']}; }}"
         f"QLineEdit::placeholder {{ color:{t['text_muted']}; }}"
@@ -107,7 +51,7 @@ def _ss_combo():
     return (
         f"QComboBox {{ background:{t['bg_input']}; color:{t['text_primary']}; "
         f"  border:{t['border_width']} solid {t['bg_input_border']}; "
-        f"  border-radius:{t['radius_sm']}; padding:2px 6px; }}"
+        f"  border-radius:{t['radius_sm']}; padding:3px 6px; }}"
         f"QComboBox::drop-down {{ border:none; }}"
         f"QComboBox QAbstractItemView {{ background:{t['bg_panel']}; color:{t['text_primary']}; "
         f"  selection-background-color:{t['accent_primary']}; "
@@ -120,30 +64,28 @@ def _ss_check():
         f"QCheckBox {{ color:{t['text_secondary']}; spacing:6px; }}"
         f"QCheckBox::indicator {{ width:13px; height:13px; "
         f"  border:{t['border_width']} solid {t['bg_border']}; "
-        f"  border-radius:2px; background:{t['bg_input']}; }}"
+        f"  border-radius:3px; background:{t['bg_input']}; }}"
         f"QCheckBox::indicator:checked {{ background:{t['accent_primary']}; "
         f"  border-color:{t['accent_primary']}; }}"
     )
 
-def _ss_group(title_color=None):
+def _ss_group():
     t = THEME
-    c = title_color or t["accent_gold"]
     return (
-        f"QGroupBox {{ color:{c}; font-weight:700; font-size:{t['font_size_small']}; "
-        f"  letter-spacing:0.5px; border:{t['border_width']} solid {t['bg_border']}; "
+        f"QGroupBox {{ color:{t['accent_gold']}; font-weight:600; font-size:{t['font_size_small']}; "
+        f"  letter-spacing:0.3px; border:{t['border_width']} solid {t['bg_border']}; "
         f"  border-radius:{t['radius_lg']}; margin-top:10px; padding-top:6px; "
         f"  background:{t['bg_panel']}; font-family:{t['font_ui']}; }}"
         f"QGroupBox::title {{ subcontrol-origin:margin; left:10px; "
         f"  background:{t['bg_panel']}; padding:0 4px; }}"
     )
 
-def _ss_add_btn(color=None):
+def _ss_add_btn():
     t = THEME
-    c = color or t["accent_primary"]
     return (
-        f"QPushButton {{ background:{t['bg_bar']}; color:{c}; "
+        f"QPushButton {{ background:{t['bg_bar']}; color:{t['text_secondary']}; "
         f"  border:{t['border_width']} solid {t['bg_border']}; "
-        f"  border-radius:{t['radius_sm']}; padding:4px 12px; "
+        f"  border-radius:{t['radius_sm']}; padding:5px 12px; "
         f"  font-size:{t['font_size_small']}; font-weight:600; }}"
         f"QPushButton:hover {{ background:{t['bg_input_border']}; color:{t['text_primary']}; }}"
     )
@@ -152,7 +94,7 @@ def _ss_rm_btn():
     t = THEME
     return (
         f"QPushButton {{ background:transparent; color:{t['text_muted']}; border:none; }}"
-        f"QPushButton:hover {{ color:{t['accent_primary']}; }}"
+        f"QPushButton:hover {{ color:{t['accent_hover']}; }}"
     )
 
 def _ss_global():
@@ -177,19 +119,17 @@ def _ss_global():
             border: {t['border_width']} solid {t['bg_border']};
             background: {t['bg_main']};
             border-radius: {t['radius_md']};
+            top: -1px;
         }}
         QTabBar::tab {{
-            background: {t['bg_bar']};
+            background: transparent;
             color: {t['text_secondary']};
-            padding: 6px 16px;
-            border-top-left-radius: {t['radius_md']};
-            border-top-right-radius: {t['radius_md']};
-            border: {t['border_width']} solid {t['bg_border']};
+            padding: 6px 14px;
+            border: none;
             margin-right: 2px;
             font-family: {t['font_ui']};
         }}
         QTabBar::tab:selected {{
-            background: {t['bg_main']};
             color: {t['accent_primary']};
             font-weight: 700;
             border-bottom: 2px solid {t['accent_primary']};
@@ -204,12 +144,7 @@ SS = {
     "combo":    _ss_combo(),
     "check":    _ss_check(),
     "group":    _ss_group(),
-    "group_rust": _ss_group(THEME["accent_primary"]),
-    "group_moss": _ss_group(THEME["accent_secondary"]),
-    "group_mid":  _ss_group(THEME["text_secondary"]),
-    "add_btn":    _ss_add_btn(),
-    "add_btn_rust": _ss_add_btn(THEME["accent_primary"]),
-    "add_btn_moss": _ss_add_btn(THEME["accent_secondary"]),
+    "add_btn":  _ss_add_btn(),
     "rm_btn":   _ss_rm_btn(),
     "global":   _ss_global(),
 }
@@ -261,9 +196,17 @@ class DaedalusHighlighter(QSyntaxHighlighter):
 
 
 # ── Data models ───────────────────────────────────────────────────────────────
+def is_hero_speaker(speaker):
+    return speaker == "other"
+
+
+def speaker_display_name(speaker):
+    return "Hero" if is_hero_speaker(speaker) else "NPC"
+
+
 class DialogLine:
-    def __init__(self, speaker="other", text=""):
-        self.speaker = speaker
+    def __init__(self, speaker="self", text=""):
+        self.speaker = speaker   # "self" = NPC, "other" = Hero
         self.text = text
 
 class DialogChoice:
@@ -353,31 +296,235 @@ def generate_constants_file(npc_name, blocks):
     return "\n".join(out)
 
 
-# ── Widgets ───────────────────────────────────────────────────────────────────
-class LineWidget(QFrame):
-    def __init__(self, parent=None, on_remove=None):
+# ── Parser (round-trips files produced by this tool) ───────────────────────────
+def parse_dia_file(text):
+    header_m = re.search(r'//\s*Dialog file for\s+(.*?)\s*\((.*?)\)', text)
+    npc_name = header_m.group(1).strip() if header_m else ""
+    npc_id   = header_m.group(2).strip() if header_m else ""
+    prefix = f"DIA_{sanitize(npc_name)}_"
+
+    blocks = []
+    segments = re.split(r'\binstance\s+', text)
+    for seg in segments[1:]:
+        seg = "instance " + seg
+        name_m = re.match(r'instance\s+(\w+)\s*\(C_INFO\)', seg)
+        if not name_m:
+            continue
+        bn = name_m.group(1)
+        if bn.endswith("_EXIT"):
+            continue  # the EXIT block is regenerated automatically, skip it
+
+        body_m = re.search(r'\{(.*?)\}\s*;', seg, re.S)
+        body = body_m.group(1) if body_m else ""
+
+        def field(pat, default=""):
+            m = re.search(pat, body)
+            return m.group(1).strip() if m else default
+
+        b = DialogBlock()
+        b.name = bn[len(prefix):] if bn.startswith(prefix) else bn
+        try: b.nr = int(field(r'nr\s*=\s*(\d+)\s*;', "1"))
+        except ValueError: b.nr = 1
+        perm = field(r'permanent\s*=\s*(\d+)\s*;', "0")
+        b.permanent = int(perm) if perm.isdigit() else 0
+        b.important = 1 if re.search(r'important\s*=\s*1\s*;', body) else 0
+        b.description = field(r'description\s*=\s*"([^"]*)"\s*;', "")
+        b.is_trade = bool(re.search(r'Trade\s*=\s*1\s*;', body))
+
+        cond_m = re.search(rf'FUNC int {re.escape(bn)}_Condition\(\)(.*?)FUNC VOID', seg, re.S)
+        cond_body = cond_m.group(1).strip() if cond_m else ""
+        if cond_body and cond_body != "return 1;":
+            b.condition_expr = cond_body
+
+        info_m = re.search(rf'FUNC VOID {re.escape(bn)}_Info\(\)(.*)', seg, re.S)
+        info_body = info_m.group(1) if info_m else ""
+        cut = re.search(r'\n//\s=+', info_body)
+        if cut: info_body = info_body[:cut.start()]
+
+        for m in re.finditer(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)', info_body):
+            sf, txt = m.group(1), m.group(3).strip()
+            speaker = "other" if sf == "other" else "self"
+            b.lines.append(DialogLine(speaker=speaker, text=txt))
+
+        for m in re.finditer(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);', info_body):
+            b.choices.append(DialogChoice(label=m.group(1), func_name=m.group(2)))
+
+        xp_m = re.search(r'B_GiveXP\(([^)]*)\);', info_body)
+        if xp_m: b.give_xp = xp_m.group(1).strip()
+
+        gi_m = re.search(r'B_GiveInvItems\(self,\s*other,\s*([^,]+),\s*(\d+)\);', info_body)
+        if gi_m: b.give_item = gi_m.group(1).strip(); b.give_item_count = int(gi_m.group(2))
+
+        ti_m = re.search(r'B_GiveInvItems\(other,\s*self,\s*([^,]+),\s*(\d+)\);', info_body)
+        if ti_m: b.take_item = ti_m.group(1).strip(); b.take_item_count = int(ti_m.group(2))
+
+        status_m = re.search(r'Log_SetTopicStatus\s*\(([^,]+),\s*(\w+)\);', info_body)
+        if status_m:
+            b.log_topic = status_m.group(1).strip(); b.log_status = status_m.group(2).strip()
+        else:
+            topic_m = re.search(r'Log_CreateTopic\s*\(([^,]+),', info_body)
+            if topic_m: b.log_topic = topic_m.group(1).strip()
+
+        entry_m = re.search(r'B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);', info_body)
+        if entry_m: b.log_entry = entry_m.group(1)
+
+        b.stop_after = bool(re.search(r'AI_StopProcessInfos\s*\(self\);', info_body))
+        blocks.append(b)
+
+    blocks.sort(key=lambda x: x.nr)
+    return npc_name, npc_id, blocks
+
+
+# ── Chat-based dialog line input ────────────────────────────────────────────────
+class ChatInput(QLineEdit):
+    """Enter submits the current line. Up/Down always switch speaker; Left/Right
+    switch speaker only when the field is empty, so normal text editing still works."""
+    def __init__(self, on_submit=None, on_toggle=None, parent=None):
         super().__init__(parent)
+        self.on_submit = on_submit
+        self.on_toggle = on_toggle
+
+    def keyPressEvent(self, e):
+        k = e.key()
+        if k in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            text = self.text().strip()
+            if text and self.on_submit:
+                self.on_submit(text)
+                self.clear()
+            e.accept()
+            return
+        if k in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            if self.on_toggle: self.on_toggle()
+            e.accept()
+            return
+        if k in (Qt.Key.Key_Left, Qt.Key.Key_Right) and not self.text():
+            if self.on_toggle: self.on_toggle()
+            e.accept()
+            return
+        super().keyPressEvent(e)
+
+
+class ChatBubble(QFrame):
+    def __init__(self, line: DialogLine, on_remove=None):
+        super().__init__()
         self.on_remove = on_remove
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setStyleSheet(
-            f"QFrame {{ background:{THEME['bg_input']}; "
-            f"border:{THEME['border_width']} solid {THEME['bg_input_border']}; "
-            f"border-radius:{THEME['radius_md']}; margin:1px; }}")
-        lay = QHBoxLayout(self); lay.setContentsMargins(6, 4, 6, 4); lay.setSpacing(6)
-        self.speaker = QComboBox(); self.speaker.addItems(["Hero", "NPC"])
-        self.speaker.setFixedWidth(68); self.speaker.setStyleSheet(SS["combo"])
-        self.text = QLineEdit(); self.text.setPlaceholderText("Dialog line…")
-        self.text.setStyleSheet(SS["field"])
-        rm = QPushButton("✕"); rm.setFixedSize(22, 22); rm.setStyleSheet(SS["rm_btn"])
+        is_hero = is_hero_speaker(line.speaker)
+        bg = THEME["bubble_hero_bg"] if is_hero else THEME["bubble_npc_bg"]
+        fg = THEME["bubble_hero_text"] if is_hero else THEME["bubble_npc_text"]
+
+        outer = QHBoxLayout(self); outer.setContentsMargins(2, 1, 2, 1); outer.setSpacing(0)
+        if is_hero: outer.addStretch(1)
+
+        bubble = QFrame()
+        bubble.setStyleSheet(f"QFrame {{ background:{bg}; border-radius:{THEME['radius_lg']}; }}")
+        bl = QHBoxLayout(bubble); bl.setContentsMargins(10, 6, 6, 6); bl.setSpacing(4)
+
+        tag = QLabel(speaker_display_name(line.speaker))
+        tag.setStyleSheet(
+            f"color:{fg}; background:transparent; font-weight:700; "
+            f"font-size:{THEME['font_size_tiny']}; letter-spacing:1px;")
+
+        text_lbl = QLabel(line.text)
+        text_lbl.setWordWrap(True)
+        text_lbl.setStyleSheet(f"color:{fg}; background:transparent; font-family:{THEME['font_ui']};")
+        text_lbl.setMaximumWidth(340)
+
+        col = QVBoxLayout(); col.setSpacing(1)
+        col.addWidget(tag); col.addWidget(text_lbl)
+        bl.addLayout(col, 1)
+
+        rm = QPushButton("✕"); rm.setFixedSize(16, 16); rm.setStyleSheet(SS["rm_btn"])
         rm.clicked.connect(lambda: self.on_remove(self) if self.on_remove else None)
-        lay.addWidget(self.speaker); lay.addWidget(self.text, 1); lay.addWidget(rm)
+        bl.addWidget(rm, 0, Qt.AlignmentFlag.AlignTop)
 
-    def get_line(self):
-        return DialogLine(
-            speaker="other" if self.speaker.currentIndex() == 0 else "self",
-            text=self.text.text())
+        outer.addWidget(bubble)
+        if not is_hero: outer.addStretch(1)
 
 
+class ChatLinesWidget(QWidget):
+    def __init__(self, on_change=None):
+        super().__init__()
+        self.on_change = on_change
+        self.lines: list[DialogLine] = []
+        self.current_speaker = "self"   # self = NPC, other = Hero
+        self._bubble_map = {}
+        self._build()
+
+    def _build(self):
+        root = QVBoxLayout(self); root.setContentsMargins(0, 0, 0, 0); root.setSpacing(6)
+
+        self.chat_container = QWidget()
+        self.chat_container.setStyleSheet(f"background:{THEME['bg_main']};")
+        self.chat_layout = QVBoxLayout(self.chat_container)
+        self.chat_layout.setContentsMargins(6, 6, 6, 6); self.chat_layout.setSpacing(3)
+        self.chat_layout.addStretch()
+
+        self.scroll = QScrollArea(); self.scroll.setWidget(self.chat_container)
+        self.scroll.setWidgetResizable(True); self.scroll.setMinimumHeight(150)
+        self.scroll.setStyleSheet(
+            f"QScrollArea {{ border:{THEME['border_width']} solid {THEME['bg_border']}; "
+            f"border-radius:{THEME['radius_md']}; background:{THEME['bg_main']}; }}")
+        root.addWidget(self.scroll, 1)
+
+        inrow = QHBoxLayout(); inrow.setSpacing(6)
+        self.speaker_btn = QPushButton()
+        self.speaker_btn.setFixedWidth(64)
+        self.speaker_btn.clicked.connect(self._toggle_speaker)
+        self.input = ChatInput(on_submit=self._submit, on_toggle=self._toggle_speaker)
+        self.input.setPlaceholderText("Type a line, press Enter  ·  ↑ ↓ switches speaker")
+        self.input.setStyleSheet(SS["field"])
+        inrow.addWidget(self.speaker_btn); inrow.addWidget(self.input, 1)
+        root.addLayout(inrow)
+
+        self._update_speaker_style()
+
+    def _toggle_speaker(self):
+        self.current_speaker = "other" if self.current_speaker == "self" else "self"
+        self._update_speaker_style()
+        self.input.setFocus()
+
+    def _update_speaker_style(self):
+        is_hero = is_hero_speaker(self.current_speaker)
+        self.speaker_btn.setText(speaker_display_name(self.current_speaker))
+        color = THEME["accent_primary"] if is_hero else THEME["accent_secondary"]
+        self.speaker_btn.setStyleSheet(
+            f"QPushButton {{ background:{color}; color:{THEME['bg_main']}; border:none; "
+            f"border-radius:{THEME['radius_md']}; font-weight:700; padding:7px 0; }}"
+            f"QPushButton:hover {{ background:{THEME['accent_hover']}; }}")
+
+    def _submit(self, text):
+        line = DialogLine(speaker=self.current_speaker, text=text)
+        self.lines.append(line)
+        self._add_bubble(line)
+        if self.on_change: self.on_change()
+        QTimer.singleShot(0, lambda: self.scroll.verticalScrollBar().setValue(
+            self.scroll.verticalScrollBar().maximum()))
+
+    def _add_bubble(self, line):
+        bubble = ChatBubble(line, on_remove=self._remove_bubble)
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble)
+        self._bubble_map[bubble] = line
+
+    def _remove_bubble(self, bubble):
+        line = self._bubble_map.pop(bubble, None)
+        if line in self.lines: self.lines.remove(line)
+        bubble.setParent(None); bubble.deleteLater()
+        if self.on_change: self.on_change()
+
+    def load_lines(self, lines):
+        for b in list(self._bubble_map.keys()):
+            b.setParent(None); b.deleteLater()
+        self._bubble_map = {}
+        self.lines = []
+        for l in lines:
+            self.lines.append(l)
+            self._add_bubble(l)
+
+    def get_lines(self):
+        return list(self.lines)
+
+
+# ── Widgets ───────────────────────────────────────────────────────────────────
 class ChoiceWidget(QFrame):
     def __init__(self, parent=None, on_remove=None):
         super().__init__(parent)
@@ -390,7 +537,7 @@ class ChoiceWidget(QFrame):
         lay = QHBoxLayout(self); lay.setContentsMargins(6, 4, 6, 4); lay.setSpacing(6)
         self.label = QLineEdit(); self.label.setPlaceholderText("Choice shown to player…")
         self.label.setStyleSheet(
-            f"QLineEdit {{ background:{THEME['bg_choice_input']}; color:{THEME['accent_secondary']}; "
+            f"QLineEdit {{ background:{THEME['bg_choice_input']}; color:{THEME['accent_hover']}; "
             f"border:none; border-radius:2px; padding:4px 6px; font-weight:500; }}")
         self.func = QLineEdit(); self.func.setPlaceholderText("Handler func (optional)")
         self.func.setFixedWidth(190); self.func.setStyleSheet(SS["field"])
@@ -409,133 +556,148 @@ class BlockEditor(QWidget):
         self._build()
 
     def _build(self):
-        root = QVBoxLayout(self); root.setContentsMargins(12, 12, 12, 12); root.setSpacing(10)
+        root = QVBoxLayout(self); root.setContentsMargins(14, 12, 14, 12); root.setSpacing(8)
 
-        def lbl(text):
+        def lbl(text, width=60):
             w = QLabel(text)
-            w.setFixedWidth(44)
-            w.setStyleSheet(f"color:{THEME['text_secondary']}; font-weight:600;")
+            w.setFixedWidth(width)
+            w.setStyleSheet(f"color:{THEME['text_secondary']}; font-weight:600; font-size:{THEME['font_size_small']};")
             return w
 
-        def scrolled(container, min_h):
-            sc = QScrollArea(); sc.setWidget(container); sc.setWidgetResizable(True)
-            sc.setMinimumHeight(min_h)
-            sc.setStyleSheet(f"QScrollArea {{ border:none; background:{THEME['bg_main']}; }}")
-            return sc
+        # Scene name — always visible, it's how the scene is identified in the list
+        name_row = QHBoxLayout()
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("Scene name  ·  e.g. Hello · WannaJoin · KalomsRecipe")
+        self.name_edit.setStyleSheet(SS["field"])
+        name_row.addWidget(lbl("Name")); name_row.addWidget(self.name_edit, 1)
+        root.addLayout(name_row)
 
-        # Settings group
-        mg = QGroupBox("Block Settings"); mg.setStyleSheet(SS["group"])
-        ml = QVBoxLayout(mg); ml.setSpacing(7)
+        tabs = QTabWidget()
 
-        r1 = QHBoxLayout()
-        self.name_edit = QLineEdit(); self.name_edit.setPlaceholderText("e.g. Hello  ·  WannaJoin  ·  KalomsRecipe"); self.name_edit.setStyleSheet(SS["field"])
-        self.nr_spin = QSpinBox(); self.nr_spin.setRange(1, 998); self.nr_spin.setValue(1); self.nr_spin.setFixedWidth(62); self.nr_spin.setStyleSheet(SS["spin"])
-        nr_lbl = QLabel("  nr"); nr_lbl.setStyleSheet(f"color:{THEME['text_secondary']}; font-weight:600;")
-        r1.addWidget(lbl("Name")); r1.addWidget(self.name_edit, 1); r1.addWidget(nr_lbl); r1.addWidget(self.nr_spin)
-        ml.addLayout(r1)
+        # ── Dialog tab: the chat + choices, the primary work surface ──────────
+        dialog_tab = QWidget()
+        dt = QVBoxLayout(dialog_tab); dt.setContentsMargins(10, 10, 10, 10); dt.setSpacing(8)
+
+        self.chat = ChatLinesWidget(on_change=self._emit)
+        dt.addWidget(self.chat, 1)
+
+        choices_hdr = QHBoxLayout()
+        choices_hdr.addWidget(lbl("Choices", 60))
+        add_choice_btn = QPushButton("＋  Add choice")
+        add_choice_btn.setStyleSheet(SS["add_btn"])
+        add_choice_btn.clicked.connect(lambda: self._add_choice())
+        choices_hdr.addStretch(); choices_hdr.addWidget(add_choice_btn)
+        dt.addLayout(choices_hdr)
+
+        self.choices_container = QWidget()
+        self.choices_container.setStyleSheet(f"background:{THEME['bg_main']};")
+        self.choices_layout = QVBoxLayout(self.choices_container)
+        self.choices_layout.setContentsMargins(0, 0, 0, 0); self.choices_layout.setSpacing(3)
+        choices_scroll = QScrollArea(); choices_scroll.setWidget(self.choices_container)
+        choices_scroll.setWidgetResizable(True); choices_scroll.setMaximumHeight(110)
+        choices_scroll.setStyleSheet(f"QScrollArea {{ border:none; background:{THEME['bg_main']}; }}")
+        dt.addWidget(choices_scroll)
+
+        tabs.addTab(dialog_tab, "Dialog")
+
+        # ── Advanced tab: everything else, tucked away ─────────────────────────
+        adv_tab = QWidget()
+        av = QVBoxLayout(adv_tab); av.setContentsMargins(10, 10, 10, 10); av.setSpacing(10)
 
         r2 = QHBoxLayout()
-        self.desc_edit = QLineEdit(); self.desc_edit.setPlaceholderText("Player-visible choice text  (blank for auto/important dialogs)"); self.desc_edit.setStyleSheet(SS["field"])
+        self.desc_edit = QLineEdit(); self.desc_edit.setPlaceholderText("Player-visible choice text  (blank for auto/important)")
+        self.desc_edit.setStyleSheet(SS["field"])
         r2.addWidget(lbl("Desc")); r2.addWidget(self.desc_edit, 1)
-        ml.addLayout(r2)
+        av.addLayout(r2)
 
         r3 = QHBoxLayout()
-        self.perm_cb  = QCheckBox("Permanent");            self.perm_cb.setStyleSheet(SS["check"])
-        self.imp_cb   = QCheckBox("Important (auto)");     self.imp_cb.setStyleSheet(SS["check"])
-        self.trade_cb = QCheckBox("Trade");                self.trade_cb.setStyleSheet(SS["check"])
+        self.perm_cb  = QCheckBox("Permanent");        self.perm_cb.setStyleSheet(SS["check"])
+        self.imp_cb   = QCheckBox("Important (auto)"); self.imp_cb.setStyleSheet(SS["check"])
+        self.trade_cb = QCheckBox("Trade");             self.trade_cb.setStyleSheet(SS["check"])
         r3.addWidget(self.perm_cb); r3.addWidget(self.imp_cb); r3.addWidget(self.trade_cb); r3.addStretch()
-        ml.addLayout(r3)
+        av.addLayout(r3)
 
         r4 = QHBoxLayout()
-        self.cond_edit = QLineEdit(); self.cond_edit.setPlaceholderText("e.g.  if (Kapitel < 3) { return 1; }"); self.cond_edit.setStyleSheet(SS["field"])
+        self.cond_edit = QLineEdit(); self.cond_edit.setPlaceholderText("e.g.  if (Kapitel < 3) { return 1; }")
+        self.cond_edit.setStyleSheet(SS["field"])
         r4.addWidget(lbl("Cond")); r4.addWidget(self.cond_edit, 1)
-        ml.addLayout(r4)
-        root.addWidget(mg)
+        av.addLayout(r4)
 
-        # Lines group
-        lg = QGroupBox("Dialog Lines"); lg.setStyleSheet(SS["group_rust"])
-        lv = QVBoxLayout(lg); lv.setSpacing(4)
-        self.lines_container = QWidget(); self.lines_container.setStyleSheet(f"background:{THEME['bg_main']};")
-        self.lines_layout = QVBoxLayout(self.lines_container); self.lines_layout.setContentsMargins(0,0,0,0); self.lines_layout.setSpacing(3)
-        lv.addWidget(scrolled(self.lines_container, 200))
-        ab = QPushButton("＋  Add Line"); ab.setStyleSheet(SS["add_btn_rust"]); ab.clicked.connect(self._add_line)
-        lv.addWidget(ab)
-        root.addWidget(lg)
-
-        # Choices group
-        cg = QGroupBox("Dialog Choices  —  optional branching"); cg.setStyleSheet(SS["group_moss"])
-        cv = QVBoxLayout(cg); cv.setSpacing(4)
-        self.choices_container = QWidget(); self.choices_container.setStyleSheet(f"background:{THEME['bg_main']};")
-        self.choices_layout = QVBoxLayout(self.choices_container); self.choices_layout.setContentsMargins(0,0,0,0); self.choices_layout.setSpacing(3)
-        cv.addWidget(scrolled(self.choices_container, 80))
-        cb = QPushButton("＋  Add Choice"); cb.setStyleSheet(SS["add_btn_moss"]); cb.clicked.connect(self._add_choice)
-        cv.addWidget(cb)
-        root.addWidget(cg)
-
-        # Effects group
-        fg = QGroupBox("Effects  —  optional"); fg.setStyleSheet(SS["group_mid"])
-        fv = QVBoxLayout(fg); fv.setSpacing(7)
+        div = QFrame(); div.setFrameShape(QFrame.Shape.HLine)
+        div.setStyleSheet(f"color:{THEME['bg_border']};")
+        av.addWidget(div)
 
         def row(label_text, *widgets):
             rw = QHBoxLayout(); rw.setSpacing(6)
-            lb = QLabel(label_text); lb.setFixedWidth(70)
-            lb.setStyleSheet(f"color:{THEME['text_secondary']}; font-weight:600; font-size:{THEME['font_size_small']};")
-            rw.addWidget(lb)
+            rw.addWidget(lbl(label_text, 74))
             for w in widgets: rw.addWidget(w)
             return rw
 
-        self.xp_edit = QLineEdit(); self.xp_edit.setPlaceholderText("XP constant  e.g. XP_KilledBandit"); self.xp_edit.setStyleSheet(SS["field"])
-        fv.addLayout(row("Give XP:", self.xp_edit))
+        self.xp_edit = QLineEdit(); self.xp_edit.setPlaceholderText("XP constant  e.g. XP_KilledBandit")
+        self.xp_edit.setStyleSheet(SS["field"])
+        av.addLayout(row("Give XP", self.xp_edit))
 
-        self.give_item_edit = QLineEdit(); self.give_item_edit.setPlaceholderText("Item  e.g. ItAm_Prot_Fire_01"); self.give_item_edit.setStyleSheet(SS["field"])
-        self.give_count = QSpinBox(); self.give_count.setRange(1,999); self.give_count.setValue(1); self.give_count.setFixedWidth(54); self.give_count.setStyleSheet(SS["spin"])
-        x1 = QLabel("×"); x1.setStyleSheet(f"color:{THEME['text_muted']};")
-        fv.addLayout(row("Give Item:", self.give_item_edit, x1, self.give_count))
+        self.give_item_edit = QLineEdit(); self.give_item_edit.setPlaceholderText("Item  e.g. ItAm_Prot_Fire_01")
+        self.give_item_edit.setStyleSheet(SS["field"])
+        self.give_count = QSpinBox(); self.give_count.setRange(1, 999); self.give_count.setValue(1)
+        self.give_count.setFixedWidth(54); self.give_count.setStyleSheet(SS["spin"])
+        av.addLayout(row("Give Item", self.give_item_edit, self.give_count))
 
-        self.take_item_edit = QLineEdit(); self.take_item_edit.setPlaceholderText("Item  e.g. ItWr_SomeScroll"); self.take_item_edit.setStyleSheet(SS["field"])
-        self.take_count = QSpinBox(); self.take_count.setRange(1,999); self.take_count.setValue(1); self.take_count.setFixedWidth(54); self.take_count.setStyleSheet(SS["spin"])
-        x2 = QLabel("×"); x2.setStyleSheet(f"color:{THEME['text_muted']};")
-        fv.addLayout(row("Take Item:", self.take_item_edit, x2, self.take_count))
+        self.take_item_edit = QLineEdit(); self.take_item_edit.setPlaceholderText("Item  e.g. ItWr_SomeScroll")
+        self.take_item_edit.setStyleSheet(SS["field"])
+        self.take_count = QSpinBox(); self.take_count.setRange(1, 999); self.take_count.setValue(1)
+        self.take_count.setFixedWidth(54); self.take_count.setStyleSheet(SS["spin"])
+        av.addLayout(row("Take Item", self.take_item_edit, self.take_count))
 
-        self.log_topic_edit = QLineEdit(); self.log_topic_edit.setPlaceholderText("Log topic  e.g. CH1_JoinPsi"); self.log_topic_edit.setStyleSheet(SS["field"])
-        self.log_status_cmb = QComboBox(); self.log_status_cmb.addItems(["LOG_RUNNING","LOG_SUCCESS","LOG_FAILED","LOG_NOTE"]); self.log_status_cmb.setFixedWidth(130); self.log_status_cmb.setStyleSheet(SS["combo"])
-        fv.addLayout(row("Log Topic:", self.log_topic_edit, self.log_status_cmb))
+        self.log_topic_edit = QLineEdit(); self.log_topic_edit.setPlaceholderText("Log topic  e.g. CH1_JoinPsi")
+        self.log_topic_edit.setStyleSheet(SS["field"])
+        self.log_status_cmb = QComboBox()
+        self.log_status_cmb.addItems(["LOG_RUNNING", "LOG_SUCCESS", "LOG_FAILED", "LOG_NOTE"])
+        self.log_status_cmb.setFixedWidth(130); self.log_status_cmb.setStyleSheet(SS["combo"])
+        av.addLayout(row("Log Topic", self.log_topic_edit, self.log_status_cmb))
 
-        self.log_entry_edit = QLineEdit(); self.log_entry_edit.setPlaceholderText("Log entry text — shown in quest log…"); self.log_entry_edit.setStyleSheet(SS["field"])
-        fv.addLayout(row("Log Entry:", self.log_entry_edit))
+        self.log_entry_edit = QLineEdit(); self.log_entry_edit.setPlaceholderText("Log entry text — shown in quest log…")
+        self.log_entry_edit.setStyleSheet(SS["field"])
+        av.addLayout(row("Log Entry", self.log_entry_edit))
 
-        self.stop_cb = QCheckBox("AI_StopProcessInfos at end"); self.stop_cb.setChecked(True); self.stop_cb.setStyleSheet(SS["check"])
+        self.stop_cb = QCheckBox("AI_StopProcessInfos at end")
+        self.stop_cb.setChecked(True); self.stop_cb.setStyleSheet(SS["check"])
         sr = QHBoxLayout(); sr.addWidget(self.stop_cb); sr.addStretch()
-        fv.addLayout(sr)
-        root.addWidget(fg)
-        root.addStretch()
+        av.addLayout(sr)
+        av.addStretch()
+
+        tabs.addTab(adv_tab, "Advanced")
+        root.addWidget(tabs, 1)
 
         for w in [self.name_edit, self.desc_edit, self.cond_edit, self.xp_edit,
                   self.give_item_edit, self.take_item_edit, self.log_topic_edit, self.log_entry_edit]:
             w.textChanged.connect(self._emit)
         for w in [self.perm_cb, self.imp_cb, self.trade_cb, self.stop_cb]:
             w.stateChanged.connect(self._emit)
-        self.nr_spin.valueChanged.connect(self._emit)
         self.log_status_cmb.currentTextChanged.connect(self._emit)
 
     def _emit(self, *_):
         if self.on_change: self.on_change()
 
-    def _add_line(self):
-        lw = LineWidget(on_remove=self._rm)
-        lw.text.textChanged.connect(self._emit); lw.speaker.currentIndexChanged.connect(self._emit)
-        self.lines_layout.addWidget(lw); self._emit()
-
-    def _add_choice(self):
-        cw = ChoiceWidget(on_remove=self._rm)
+    def _add_choice(self, choice=None):
+        cw = ChoiceWidget(on_remove=self._rm_choice)
+        if choice:
+            cw.label.setText(choice.label); cw.func.setText(choice.func_name)
         cw.label.textChanged.connect(self._emit); cw.func.textChanged.connect(self._emit)
-        self.choices_layout.addWidget(cw); self._emit()
+        self.choices_layout.addWidget(cw)
+        self._emit()
 
-    def _rm(self, w): w.setParent(None); w.deleteLater(); self._emit()
+    def _rm_choice(self, w): w.setParent(None); w.deleteLater(); self._emit()
+
+    def _clear_choices(self):
+        while self.choices_layout.count():
+            item = self.choices_layout.takeAt(0)
+            w = item.widget()
+            if w: w.deleteLater()
 
     def get_block(self):
         b = DialogBlock()
-        b.name = self.name_edit.text().strip(); b.nr = self.nr_spin.value()
+        b.name = self.name_edit.text().strip()
         b.description = self.desc_edit.text().strip()
         b.permanent = 1 if self.perm_cb.isChecked() else 0
         b.important = 1 if self.imp_cb.isChecked() else 0
@@ -547,22 +709,39 @@ class BlockEditor(QWidget):
         b.take_item = self.take_item_edit.text().strip(); b.take_item_count = self.take_count.value()
         b.log_topic = self.log_topic_edit.text().strip(); b.log_entry = self.log_entry_edit.text().strip()
         b.log_status = self.log_status_cmb.currentText()
-        for i in range(self.lines_layout.count()):
-            w = self.lines_layout.itemAt(i).widget()
-            if isinstance(w, LineWidget): b.lines.append(w.get_line())
+        b.lines = self.chat.get_lines()
         for i in range(self.choices_layout.count()):
             w = self.choices_layout.itemAt(i).widget()
             if isinstance(w, ChoiceWidget): b.choices.append(w.get_choice())
         return b
+
+    def load_block(self, b: DialogBlock):
+        self.name_edit.setText(b.name)
+        self.desc_edit.setText(b.description)
+        self.perm_cb.setChecked(bool(b.permanent))
+        self.imp_cb.setChecked(bool(b.important))
+        self.trade_cb.setChecked(bool(b.is_trade))
+        self.cond_edit.setText(b.condition_expr)
+        self.stop_cb.setChecked(bool(b.stop_after))
+        self.xp_edit.setText(b.give_xp)
+        self.give_item_edit.setText(b.give_item); self.give_count.setValue(b.give_item_count or 1)
+        self.take_item_edit.setText(b.take_item); self.take_count.setValue(b.take_item_count or 1)
+        self.log_topic_edit.setText(b.log_topic); self.log_entry_edit.setText(b.log_entry)
+        idx = self.log_status_cmb.findText(b.log_status)
+        if idx >= 0: self.log_status_cmb.setCurrentIndex(idx)
+        self.chat.load_lines(b.lines)
+        self._clear_choices()
+        for ch in b.choices:
+            self._add_choice(ch)
 
 
 class BlockListItem(QFrame):
     def __init__(self, idx, name, parent=None, on_select=None, on_remove=None):
         super().__init__(parent)
         self.idx = idx; self.on_select = on_select; self.on_remove = on_remove; self._active = False
-        self.setFixedHeight(36); self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedHeight(34); self.setCursor(Qt.CursorShape.PointingHandCursor)
         lay = QHBoxLayout(self); lay.setContentsMargins(10, 4, 6, 4)
-        self.lbl = QLabel(name or f"Block {idx+1}")
+        self.lbl = QLabel(name or f"Scene {idx+1}")
         rm = QPushButton("✕"); rm.setFixedSize(18, 18); rm.setStyleSheet(SS["rm_btn"])
         rm.clicked.connect(lambda: on_remove(self.idx) if on_remove else None)
         lay.addWidget(self.lbl, 1); lay.addWidget(rm)
@@ -574,7 +753,7 @@ class BlockListItem(QFrame):
                 f"QFrame {{ background:{THEME['bg_bar']}; border-left:3px solid {THEME['accent_primary']}; "
                 f"border-radius:{THEME['radius_sm']}; margin:1px; }}")
             self.lbl.setStyleSheet(
-                f"color:{THEME['accent_primary']}; font-weight:700; font-size:{THEME['font_size_ui']};")
+                f"color:{THEME['accent_hover']}; font-weight:700; font-size:{THEME['font_size_ui']};")
         else:
             self.setStyleSheet(
                 f"QFrame {{ background:{THEME['bg_panel']}; border-left:3px solid transparent; "
@@ -583,7 +762,7 @@ class BlockListItem(QFrame):
                 f"color:{THEME['text_secondary']}; font-size:{THEME['font_size_ui']};")
 
     def set_active(self, v): self._active = v; self._update_style()
-    def update_name(self, n): self.lbl.setText(n or f"Block {self.idx+1}")
+    def update_name(self, n): self.lbl.setText(n or f"Scene {self.idx+1}")
     def mousePressEvent(self, e):
         if self.on_select: self.on_select(self.idx)
 
@@ -592,6 +771,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.blocks = []; self.block_editors = []; self.block_items = []; self.current_block_idx = -1
+        self.current_file_path = None
         self.setWindowTitle("Gothic Dialog Generator")
         w, h = THEME["window_size"]
         self.resize(w, h)
@@ -606,16 +786,13 @@ class MainWindow(QMainWindow):
         topbar = QFrame(); topbar.setFixedHeight(THEME["topbar_height"])
         topbar.setStyleSheet(
             f"QFrame {{ background:{THEME['bg_bar']}; "
-            f"border-bottom:2px solid {THEME['bg_border']}; }}")
-        tb = QHBoxLayout(topbar); tb.setContentsMargins(18, 10, 18, 10); tb.setSpacing(10)
+            f"border-bottom:{THEME['border_width']} solid {THEME['bg_border']}; }}")
+        tb = QHBoxLayout(topbar); tb.setContentsMargins(18, 8, 18, 8); tb.setSpacing(10)
 
-        crown = QLabel("⚔")
-        crown.setStyleSheet(f"color:{THEME['accent_primary']}; font-size:20px;")
-
-        title = QLabel("Gothic  Dialog  Generator")
+        title = QLabel("Gothic Dialog Generator")
         title.setStyleSheet(
             f"color:{THEME['text_primary']}; font-size:{THEME['font_size_title']}; font-weight:700; "
-            f"font-family:{THEME['font_ui']}; letter-spacing:2px;")
+            f"font-family:{THEME['font_ui']}; letter-spacing:0.5px;")
 
         sep = QFrame(); sep.setFrameShape(QFrame.Shape.VLine)
         sep.setStyleSheet(f"color:{THEME['bg_border']}; margin:4px 6px;")
@@ -626,32 +803,32 @@ class MainWindow(QMainWindow):
             return w
 
         self.npc_name_edit = QLineEdit(); self.npc_name_edit.setPlaceholderText("Gomez")
-        self.npc_name_edit.setFixedWidth(140); self.npc_name_edit.setStyleSheet(SS["field"])
+        self.npc_name_edit.setFixedWidth(130); self.npc_name_edit.setStyleSheet(SS["field"])
 
         self.npc_id_edit = QLineEdit(); self.npc_id_edit.setPlaceholderText("Ebr_100_Gomez")
-        self.npc_id_edit.setFixedWidth(180); self.npc_id_edit.setStyleSheet(SS["field"])
+        self.npc_id_edit.setFixedWidth(160); self.npc_id_edit.setStyleSheet(SS["field"])
 
-        refresh_btn = QPushButton("↺  Refresh")
-        refresh_btn.setStyleSheet(
+        open_btn = QPushButton("Open")
+        open_btn.setStyleSheet(
             f"QPushButton {{ background:{THEME['bg_panel']}; color:{THEME['text_secondary']}; "
             f"border:{THEME['border_width']} solid {THEME['bg_border']}; "
             f"border-radius:{THEME['radius_md']}; padding:6px 14px; font-weight:600; }}"
             f"QPushButton:hover {{ background:{THEME['bg_input_border']}; color:{THEME['text_primary']}; }}")
-        refresh_btn.clicked.connect(self._refresh_preview)
+        open_btn.clicked.connect(self._open)
 
-        export_btn = QPushButton("📜  Export Files")
-        export_btn.setStyleSheet(
+        save_btn = QPushButton("Save")
+        save_btn.setStyleSheet(
             f"QPushButton {{ background:{THEME['accent_primary']}; color:{THEME['bg_main']}; "
             f"border:{THEME['border_width']} solid {THEME['accent_hover']}; "
             f"border-radius:{THEME['radius_md']}; padding:6px 16px; "
             f"font-weight:700; font-family:{THEME['font_ui']}; }}"
             f"QPushButton:hover {{ background:{THEME['accent_hover']}; }}")
-        export_btn.clicked.connect(self._export)
+        save_btn.clicked.connect(self._save)
 
-        tb.addWidget(crown); tb.addWidget(title); tb.addWidget(sep); tb.addStretch()
+        tb.addWidget(title); tb.addWidget(sep); tb.addStretch()
         tb.addWidget(hdr_lbl("NPC Name")); tb.addWidget(self.npc_name_edit)
         tb.addWidget(hdr_lbl("NPC ID"));   tb.addWidget(self.npc_id_edit)
-        tb.addWidget(refresh_btn); tb.addWidget(export_btn)
+        tb.addWidget(open_btn); tb.addWidget(save_btn)
         root.addWidget(topbar)
 
         splitter = QSplitter(Qt.Orientation.Horizontal); splitter.setHandleWidth(2)
@@ -681,54 +858,50 @@ class MainWindow(QMainWindow):
 
         add_block_btn = QPushButton("＋  New Scene")
         add_block_btn.setStyleSheet(
-            f"QPushButton {{ background:{THEME['bg_bar']}; color:{THEME['accent_primary']}; "
+            f"QPushButton {{ background:{THEME['bg_bar']}; color:{THEME['accent_hover']}; "
             f"border:{THEME['border_width']} solid {THEME['bg_border']}; "
             f"border-radius:{THEME['radius_md']}; padding:7px; "
             f"font-weight:700; font-family:{THEME['font_ui']}; }}"
             f"QPushButton:hover {{ background:{THEME['bg_input_border']}; }}")
-        add_block_btn.clicked.connect(self._add_block)
+        add_block_btn.clicked.connect(lambda: self._add_block())
         lv.addWidget(add_block_btn)
         splitter.addWidget(left)
-        self.placeholder = QLabel("Select or create a dialog scene  →")
-        self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.placeholder.setStyleSheet(
-            f"color:{THEME['bg_border']}; font-size:{THEME['font_size_placeholder']}; "
-            f"font-family:{THEME['font_ui']}; font-style:italic;")
+
         # Editor
         self.editor_stack = QStackedWidget()
         self.editor_stack.setStyleSheet(f"QWidget {{ background:{THEME['bg_main']}; }}")
-        self.editor_stack.addWidget(self.placeholder)
 
         self.placeholder = QLabel("Select or create a dialog scene  →")
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.placeholder.setStyleSheet(
             f"color:{THEME['bg_border']}; font-size:{THEME['font_size_placeholder']}; "
             f"font-family:{THEME['font_ui']}; font-style:italic;")
+        self.editor_stack.addWidget(self.placeholder)
         self.editor_stack.setCurrentWidget(self.placeholder)
         splitter.addWidget(self.editor_stack)
 
-        # Preview
+        # Preview — single DIA_.d preview, kept quiet
         preview_panel = QWidget()
         preview_panel.setStyleSheet(f"background:{THEME['bg_main']};")
-        pv = QVBoxLayout(preview_panel); pv.setContentsMargins(0, 0, 0, 0)
-        tabs = QTabWidget()
+        pv = QVBoxLayout(preview_panel); pv.setContentsMargins(0, 0, 0, 0); pv.setSpacing(0)
+
+        pv_hdr = QLabel("  DIA_.d preview")
+        pv_hdr.setFixedHeight(28)
+        pv_hdr.setStyleSheet(
+            f"color:{THEME['text_muted']}; font-size:{THEME['font_size_tiny']}; "
+            f"font-weight:700; letter-spacing:2px; background:{THEME['bg_bar']}; "
+            f"border-bottom:{THEME['border_width']} solid {THEME['bg_border']};")
+        pv.addWidget(pv_hdr)
 
         mono = QFont(THEME["font_code"].split(",")[0].strip(), THEME["font_size_code"])
         mono.setStyleHint(QFont.StyleHint.Monospace)
+        self.dia_preview = QTextEdit(); self.dia_preview.setReadOnly(True); self.dia_preview.setFont(mono)
+        self.dia_preview.setStyleSheet(
+            f"QTextEdit {{ background:{THEME['bg_code']}; color:{THEME['text_primary']}; "
+            f"border:none; padding:10px; }}")
+        DaedalusHighlighter(self.dia_preview.document())
+        pv.addWidget(self.dia_preview)
 
-        def make_preview():
-            te = QTextEdit(); te.setReadOnly(True); te.setFont(mono)
-            te.setStyleSheet(
-                f"QTextEdit {{ background:{THEME['bg_code']}; color:{THEME['text_primary']}; "
-                f"border:none; padding:10px; }}")
-            DaedalusHighlighter(te.document())
-            return te
-
-        self.dia_preview   = make_preview()
-        self.const_preview = make_preview()
-        tabs.addTab(self.dia_preview, "DIA_.d")
-        tabs.addTab(self.const_preview, "_CONST.d")
-        pv.addWidget(tabs)
         splitter.addWidget(preview_panel)
         splitter.setSizes(THEME["splitter_sizes"])
         root.addWidget(splitter, 1)
@@ -736,13 +909,16 @@ class MainWindow(QMainWindow):
         self.npc_name_edit.textChanged.connect(self._refresh_preview)
         self.npc_id_edit.textChanged.connect(self._refresh_preview)
 
-    def _add_block(self):
-        idx = len(self.blocks); self.blocks.append(DialogBlock())
+    def _add_block(self, block=None):
+        idx = len(self.blocks)
+        b = block if block is not None else DialogBlock()
+        self.blocks.append(b)
         ed = BlockEditor(on_change=self._refresh_preview)
+        if block is not None:
+            ed.load_block(b)
         self.block_editors.append(ed)
-        self.editor_stack.addWidget(ed) 
-        print("ADDING", ed)
-        item = BlockListItem(idx, "", on_select=self._select_block, on_remove=self._remove_block)
+        self.editor_stack.addWidget(ed)
+        item = BlockListItem(idx, b.name, on_select=self._select_block, on_remove=self._remove_block)
         self.block_items.append(item)
         self.block_list_layout.insertWidget(self.block_list_layout.count() - 1, item)
         self._select_block(idx)
@@ -767,18 +943,11 @@ class MainWindow(QMainWindow):
         self._refresh_preview()
 
     def _collect_blocks(self):
-
         blocks = []
         for i, ed in enumerate(self.block_editors):
-            print("EDITOR", i, ed)
-
-            try:
-                print("NAME WIDGET", ed.name_edit)
-                print("TEXT", ed.name_edit.text())
-            except Exception as e:
-                print("BROKEN EDITOR:", i, e)
             b = ed.get_block()
-            if not b.name: b.name = f"Block{i+1}"
+            if not b.name: b.name = f"Scene{i+1}"
+            b.nr = i + 1  # nr is assigned automatically from scene order
             blocks.append(b)
             if i < len(self.block_items): self.block_items[i].update_name(b.name)
         return blocks
@@ -788,23 +957,54 @@ class MainWindow(QMainWindow):
         ni = self.npc_id_edit.text().strip()   or "NPC_ID"
         bl = self._collect_blocks()
         self.dia_preview.setPlainText(generate_dia_file(nn, ni, bl))
-        self.const_preview.setPlainText(generate_constants_file(nn, bl))
 
-    def _export(self):
+    def _save(self):
         nn = self.npc_name_edit.text().strip()
         ni = self.npc_id_edit.text().strip()
         if not nn or not ni:
             QMessageBox.warning(self, "Missing Info", "Please enter both NPC Name and NPC ID.")
             return
-        folder = QFileDialog.getExistingDirectory(self, "Select export folder")
-        if not folder: return
-        bl = self._collect_blocks(); safe = sanitize(nn)
-        dia_path   = os.path.join(folder, f"DIA_{safe}.d")
-        const_path = os.path.join(folder, f"DIA_{safe}_CONST.d")
-        with open(dia_path,   "w", encoding="utf-8") as f: f.write(generate_dia_file(nn, ni, bl))
-        with open(const_path, "w", encoding="utf-8") as f: f.write(generate_constants_file(nn, bl))
-        QMessageBox.information(self, "Scrolls Inscribed",
-            f"Files saved:\n  {dia_path}\n  {const_path}")
+        bl = self._collect_blocks()
+        default = self.current_file_path or f"DIA_{sanitize(nn)}.d"
+        path, _ = QFileDialog.getSaveFileName(self, "Save Dialog File", default, "Daedalus Dialog Files (*.d)")
+        if not path: return
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(generate_dia_file(nn, ni, bl))
+        self.current_file_path = path
+        self.setWindowTitle(f"Gothic Dialog Generator — {os.path.basename(path)}")
+        QMessageBox.information(self, "Saved", f"Dialog file saved:\n  {path}")
+
+    def _open(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Open Dialog File", "", "Daedalus Dialog Files (*.d)")
+        if not path: return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+            npc_name, npc_id, blocks = parse_dia_file(text)
+        except Exception as e:
+            QMessageBox.critical(self, "Could Not Open File", f"This file could not be read:\n{e}")
+            return
+        self._load_project(npc_name, npc_id, blocks)
+        self.current_file_path = path
+        self.setWindowTitle(f"Gothic Dialog Generator — {os.path.basename(path)}")
+
+    def _load_project(self, npc_name, npc_id, blocks):
+        for ed in self.block_editors:
+            self.editor_stack.removeWidget(ed); ed.deleteLater()
+        for item in self.block_items:
+            item.setParent(None); item.deleteLater()
+        self.blocks = []; self.block_editors = []; self.block_items = []; self.current_block_idx = -1
+
+        self.npc_name_edit.setText(npc_name)
+        self.npc_id_edit.setText(npc_id)
+
+        if not blocks:
+            self.editor_stack.setCurrentWidget(self.placeholder)
+        for b in blocks:
+            self._add_block(b)
+        if blocks:
+            self._select_block(0)
+        self._refresh_preview()
 
 
 def main():
