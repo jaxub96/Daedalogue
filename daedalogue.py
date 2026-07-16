@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Gothic Dialog Generator — Minimal Edition
 Visual design lives in theme.py. Data model + code generation live in
@@ -19,7 +18,7 @@ from PyQt6.QtGui import QColor, QPalette
 from theme import THEME, SS, DaedalusHighlighter, mono_font
 from daedalus_gen import (
     DialogBlock, sanitize, export_block_name,
-    generate_dia_file, generate_constants_file, export_plain_dialog, parse_dia_file,
+    generate_dia_file, generate_constants_file, export_plain_dialog, parse_dia_file,export_followup_name
 )
 from widgets import BlockEditor, BlockListItem
 
@@ -248,12 +247,12 @@ class MainWindow(QMainWindow):
         parent_idx = self._editor_idx_containing(cw)
         if parent_idx is None: return
         parent_block = self.blocks[parent_idx]
-        nn = self.npc_name_edit.text().strip() or "NPC"
+        ni = self.npc_id_edit.text().strip()   or "NPC_ID"
         parent_name = self.block_editors[parent_idx].name_edit.text().strip() or parent_block.name or f"Scene{parent_idx+1}"
         if parent_block.is_followup and parent_block.func_name:
             parent_bn = parent_block.func_name
         else:
-            parent_bn = export_block_name(nn, parent_name)
+            parent_bn = export_block_name(ni, parent_name)
 
         existing_children = [b for b in self.blocks if b.parent_block is parent_block]
         n = len(existing_children) + 1
@@ -296,19 +295,28 @@ class MainWindow(QMainWindow):
             b.is_trade = fresh.is_trade
             b.condition_expr = fresh.condition_expr
             b.stop_after = fresh.stop_after
-            b.give_xp = fresh.give_xp
-            b.give_item = fresh.give_item; b.give_item_count = fresh.give_item_count
-            b.take_item = fresh.take_item; b.take_item_count = fresh.take_item_count
-            b.log_topic = fresh.log_topic; b.log_entry = fresh.log_entry; b.log_status = fresh.log_status
-            b.lines = fresh.lines
+            b.entries = fresh.entries
             b.choices = fresh.choices
             self.block_items[i].update_name(b.name)
 
+        
         # nr is assigned automatically from top-level scene order
         n = 1
         for b in self.blocks:
             if not b.is_followup:
                 b.nr = n; n += 1
+
+        nn = self.npc_name_edit.text().strip() or "NPC"
+        ni = self.npc_id_edit.text().strip()   or "NPC_ID"
+        for b in self.blocks:
+            if b.is_followup:
+                parent_bn = b.parent_block.func_name if b.parent_block.is_followup \
+                    else export_block_name(ni, b.parent_block.name)
+                b.func_name = export_followup_name(parent_bn, b.name)
+        for ed in self.block_editors:
+            for cw in ed.get_choice_widgets():
+                if cw.linked_block is not None:
+                    cw.func.setText(cw.linked_block.func_name)
         return self.blocks
 
     def _refresh_preview(self, *_):
@@ -324,7 +332,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Missing Info", "Please enter both NPC Name and NPC ID.")
             return
         bl = self._collect_blocks()
-        default = self.current_file_path or f"DIA_{sanitize(nn)}.d"
+        default = self.current_file_path or f"DIA_{sanitize(ni)}.d"
         path, _ = QFileDialog.getSaveFileName(self, "Save Dialog File", default, "Daedalus Dialog Files (*.d)")
         if not path: return
         with open(path, "w", encoding="utf-8") as f:
@@ -335,11 +343,11 @@ class MainWindow(QMainWindow):
 
     def _export_text(self):
         bl = self._collect_blocks()
-        if not any(b.lines for b in bl):
+        if not any(b.lines() for b in bl):
             QMessageBox.information(self, "Nothing to Export", "Add some dialog lines first.")
             return
-        nn = self.npc_name_edit.text().strip() or "NPC"
-        default = f"{sanitize(nn)}_dialog.txt"
+        ni = self.npc_id_edit.text().strip()   or "NPC_ID"
+        default = f"{sanitize(ni)}_dialog.txt"
         path, _ = QFileDialog.getSaveFileName(self, "Export Plain Dialog Text", default, "Text Files (*.txt)")
         if not path: return
         with open(path, "w", encoding="utf-8") as f:

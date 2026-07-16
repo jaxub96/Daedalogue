@@ -1,6 +1,6 @@
 """
-widgets.py — All custom Qt widgets: the chat-style line input, choice rows,
-the per-scene editor, and the sidebar list item.
+widgets.py — All custom Qt widgets: the chat-style line/effect input, choice
+rows, the per-scene editor, and the sidebar list item.
 """
 
 from PyQt6.QtWidgets import (
@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 
 from theme import THEME, SS
-from daedalus_gen import DialogLine, DialogChoice, DialogBlock, is_hero_speaker, speaker_display_name
+from daedalus_gen import DialogLine, DialogChoice, DialogBlock, EffectEntry, is_hero_speaker, speaker_display_name
 
 
 # ── Chat-based dialog line input ────────────────────────────────────────────────
@@ -107,12 +107,118 @@ class ChatBubble(QFrame):
         if self.on_edit: self.on_edit()
 
 
+class EffectBubble(QFrame):
+    """Shows one inline effect (give/take item, XP, log entry), centered
+    and visually distinct from spoken lines. Remove and re-insert to edit."""
+    ICONS = {"give_item": "🎁", "take_item": "📤", "give_xp": "⭐", "log": "📜"}
+
+    def __init__(self, entry: EffectEntry, on_remove=None):
+        super().__init__()
+        self.entry = entry
+        self.on_remove = on_remove
+
+        outer = QHBoxLayout(self); outer.setContentsMargins(2, 2, 2, 2); outer.setSpacing(0)
+        outer.addStretch(1)
+
+        pill = QFrame()
+        pill.setStyleSheet(
+            f"QFrame {{ background:{THEME['bg_bar']}; "
+            f"border:{THEME['border_width']} dashed {THEME['bg_input_border']}; "
+            f"border-radius:{THEME['radius_lg']}; }}")
+        pl = QHBoxLayout(pill); pl.setContentsMargins(10, 4, 6, 4); pl.setSpacing(6)
+
+        icon = self.ICONS.get(entry.kind, "•")
+        lbl = QLabel(f"{icon}  {entry.summary()}")
+        lbl.setStyleSheet(
+            f"color:{THEME['text_secondary']}; background:transparent; "
+            f"font-size:{THEME['font_size_small']}; font-style:italic;")
+        rm = QPushButton("✕"); rm.setFixedSize(14, 14); rm.setStyleSheet(SS["rm_btn"])
+        rm.clicked.connect(lambda: self.on_remove(self) if self.on_remove else None)
+
+        pl.addWidget(lbl); pl.addWidget(rm)
+        outer.addWidget(pill)
+        outer.addStretch(1)
+
+
+class EffectInsertRow(QWidget):
+    """A compact row for inserting an item/xp/log effect at the current
+    point in the conversation. Fields shown depend on the selected kind."""
+    def __init__(self, on_insert=None):
+        super().__init__()
+        self.on_insert = on_insert
+        lay = QHBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(6)
+
+        self.kind_cmb = QComboBox()
+        self.kind_cmb.addItems(["Give Item", "Take Item", "Give XP", "Log Entry"])
+        self.kind_cmb.setFixedWidth(104); self.kind_cmb.setStyleSheet(SS["combo"])
+        self.kind_cmb.currentIndexChanged.connect(self._update_visibility)
+
+        self.item_edit = QLineEdit(); self.item_edit.setPlaceholderText("Item  e.g. ItAm_Prot_Fire_01")
+        self.item_edit.setStyleSheet(SS["field"])
+        self.count_spin = QSpinBox(); self.count_spin.setRange(1, 999); self.count_spin.setValue(1)
+        self.count_spin.setFixedWidth(50); self.count_spin.setStyleSheet(SS["spin"])
+
+        self.xp_edit = QLineEdit(); self.xp_edit.setPlaceholderText("XP constant  e.g. XP_KilledBandit")
+        self.xp_edit.setStyleSheet(SS["field"])
+
+        self.topic_edit = QLineEdit(); self.topic_edit.setPlaceholderText("Log topic  e.g. CH1_JoinPsi")
+        self.topic_edit.setStyleSheet(SS["field"])
+        self.status_cmb = QComboBox()
+        self.status_cmb.addItems(["LOG_RUNNING", "LOG_SUCCESS", "LOG_FAILED", "LOG_NOTE"])
+        self.status_cmb.setFixedWidth(118); self.status_cmb.setStyleSheet(SS["combo"])
+        self.entry_edit = QLineEdit(); self.entry_edit.setPlaceholderText("Log entry text")
+        self.entry_edit.setStyleSheet(SS["field"])
+
+        insert_btn = QPushButton("＋ Insert")
+        insert_btn.setStyleSheet(SS["add_btn"])
+        insert_btn.clicked.connect(self._insert)
+
+        lay.addWidget(self.kind_cmb)
+        lay.addWidget(self.item_edit, 1); lay.addWidget(self.count_spin)
+        lay.addWidget(self.xp_edit, 1)
+        lay.addWidget(self.topic_edit, 1); lay.addWidget(self.status_cmb); lay.addWidget(self.entry_edit, 1)
+        lay.addWidget(insert_btn)
+
+        self._update_visibility()
+
+    def _update_visibility(self):
+        kind = self.kind_cmb.currentIndex()   # 0 give, 1 take, 2 xp, 3 log
+        show_item = kind in (0, 1)
+        show_xp = kind == 2
+        show_log = kind == 3
+        self.item_edit.setVisible(show_item); self.count_spin.setVisible(show_item)
+        self.xp_edit.setVisible(show_xp)
+        self.topic_edit.setVisible(show_log); self.status_cmb.setVisible(show_log); self.entry_edit.setVisible(show_log)
+
+    def _insert(self):
+        kind = self.kind_cmb.currentIndex()
+        if kind == 0:
+            if not self.item_edit.text().strip(): return
+            e = EffectEntry("give_item", item=self.item_edit.text().strip(), count=self.count_spin.value())
+        elif kind == 1:
+            if not self.item_edit.text().strip(): return
+            e = EffectEntry("take_item", item=self.item_edit.text().strip(), count=self.count_spin.value())
+        elif kind == 2:
+            if not self.xp_edit.text().strip(): return
+            e = EffectEntry("give_xp", xp=self.xp_edit.text().strip())
+        else:
+            if not self.topic_edit.text().strip(): return
+            e = EffectEntry("log", log_topic=self.topic_edit.text().strip(),
+                             log_status=self.status_cmb.currentText(),
+                             log_entry=self.entry_edit.text().strip())
+        if self.on_insert: self.on_insert(e)
+        self.item_edit.clear(); self.xp_edit.clear(); self.topic_edit.clear(); self.entry_edit.clear()
+        self.count_spin.setValue(1)
+
+
 class ChatLinesWidget(QWidget):
+    """The scene's whole conversational flow: dialog lines and inline
+    effects (item/xp/log), in the exact order they'll play out."""
     def __init__(self, on_change=None):
         super().__init__()
         self.on_change = on_change
-        self.lines: list[DialogLine] = []
-        self.current_speaker = "self"   # NPC speaks first, as is typical
+        self.entries: list = []          # DialogLine | EffectEntry, in flow order
+        self.current_speaker = "self"    # NPC speaks first, as is typical
         self._bubble_map = {}
         self._build()
 
@@ -126,7 +232,7 @@ class ChatLinesWidget(QWidget):
         self.chat_layout.addStretch()
 
         self.scroll = QScrollArea(); self.scroll.setWidget(self.chat_container)
-        self.scroll.setWidgetResizable(True); self.scroll.setMinimumHeight(230)
+        self.scroll.setWidgetResizable(True); self.scroll.setMinimumHeight(220)
         self.scroll.setStyleSheet(
             f"QScrollArea {{ border:{THEME['border_width']} solid {THEME['bg_border']}; "
             f"border-radius:{THEME['radius_md']}; background:{THEME['bg_main']}; }}")
@@ -141,6 +247,9 @@ class ChatLinesWidget(QWidget):
         self.input.setStyleSheet(SS["field"])
         inrow.addWidget(self.speaker_btn); inrow.addWidget(self.input, 1)
         root.addLayout(inrow)
+
+        self.effect_row = EffectInsertRow(on_insert=self._insert_effect)
+        root.addWidget(self.effect_row)
 
         self._update_speaker_style()
 
@@ -160,37 +269,46 @@ class ChatLinesWidget(QWidget):
 
     def _submit(self, text):
         line = DialogLine(speaker=self.current_speaker, text=text)
-        self.lines.append(line)
-        self._add_bubble(line)
+        self._append(line)
+
+    def _insert_effect(self, entry):
+        self._append(entry)
+
+    def _append(self, entry):
+        self.entries.append(entry)
+        self._add_bubble(entry)
         if self.on_change: self.on_change()
         QTimer.singleShot(0, lambda: self.scroll.verticalScrollBar().setValue(
             self.scroll.verticalScrollBar().maximum()))
 
-    def _add_bubble(self, line):
-        bubble = ChatBubble(line, on_remove=self._remove_bubble, on_edit=self._on_edit)
+    def _add_bubble(self, entry):
+        if isinstance(entry, DialogLine):
+            bubble = ChatBubble(entry, on_remove=self._remove_bubble, on_edit=self._on_edit)
+        else:
+            bubble = EffectBubble(entry, on_remove=self._remove_bubble)
         self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble)
-        self._bubble_map[bubble] = line
+        self._bubble_map[bubble] = entry
 
     def _on_edit(self):
         if self.on_change: self.on_change()
 
     def _remove_bubble(self, bubble):
-        line = self._bubble_map.pop(bubble, None)
-        if line in self.lines: self.lines.remove(line)
+        entry = self._bubble_map.pop(bubble, None)
+        if entry in self.entries: self.entries.remove(entry)
         bubble.setParent(None); bubble.deleteLater()
         if self.on_change: self.on_change()
 
-    def load_lines(self, lines):
+    def load_entries(self, entries):
         for b in list(self._bubble_map.keys()):
             b.setParent(None); b.deleteLater()
         self._bubble_map = {}
-        self.lines = []
-        for l in lines:
-            self.lines.append(l)
-            self._add_bubble(l)
+        self.entries = []
+        for e in entries:
+            self.entries.append(e)
+            self._add_bubble(e)
 
-    def get_lines(self):
-        return list(self.lines)
+    def get_entries(self):
+        return list(self.entries)
 
 
 # ── Choices ───────────────────────────────────────────────────────────────────
@@ -265,7 +383,7 @@ class BlockEditor(QWidget):
 
         tabs = QTabWidget()
 
-        # ── Dialog tab: the chat + choices, the primary work surface ──────────
+        # ── Dialog tab: the chat + inline effects + choices, the primary work surface ──
         dialog_tab = QWidget()
         dt = QVBoxLayout(dialog_tab); dt.setContentsMargins(10, 10, 10, 10); dt.setSpacing(8)
 
@@ -292,7 +410,7 @@ class BlockEditor(QWidget):
 
         tabs.addTab(dialog_tab, "Dialog")
 
-        # ── Advanced tab: everything else, tucked away ─────────────────────────
+        # ── Advanced tab: scene metadata only — effects now live inline in Dialog ──
         adv_tab = QWidget()
         av = QVBoxLayout(adv_tab); av.setContentsMargins(10, 10, 10, 10); av.setSpacing(10)
 
@@ -316,56 +434,18 @@ class BlockEditor(QWidget):
             r4.addWidget(lbl("Cond")); r4.addWidget(self.cond_edit, 1)
             av.addLayout(r4)
 
-            div = QFrame(); div.setFrameShape(QFrame.Shape.HLine)
-            div.setStyleSheet(f"color:{THEME['bg_border']};")
-            av.addWidget(div)
-        else:
-            # Follow-up scenes don't have instance metadata — keep placeholders
-            # so get_block()/load_block() stay uniform across both kinds.
-            self.desc_edit = QLineEdit(); self.perm_cb = QCheckBox(); self.imp_cb = QCheckBox()
-            self.trade_cb = QCheckBox(); self.cond_edit = QLineEdit()
-
-        def row(label_text, *widgets):
-            rw = QHBoxLayout(); rw.setSpacing(6)
-            rw.addWidget(lbl(label_text, 74))
-            for w in widgets: rw.addWidget(w)
-            return rw
-
-        self.xp_edit = QLineEdit(); self.xp_edit.setPlaceholderText("XP constant  e.g. XP_KilledBandit")
-        self.xp_edit.setStyleSheet(SS["field"])
-        av.addLayout(row("Give XP", self.xp_edit))
-
-        self.give_item_edit = QLineEdit(); self.give_item_edit.setPlaceholderText("Item  e.g. ItAm_Prot_Fire_01")
-        self.give_item_edit.setStyleSheet(SS["field"])
-        self.give_count = QSpinBox(); self.give_count.setRange(1, 999); self.give_count.setValue(1)
-        self.give_count.setFixedWidth(54); self.give_count.setStyleSheet(SS["spin"])
-        av.addLayout(row("Give Item", self.give_item_edit, self.give_count))
-
-        self.take_item_edit = QLineEdit(); self.take_item_edit.setPlaceholderText("Item  e.g. ItWr_SomeScroll")
-        self.take_item_edit.setStyleSheet(SS["field"])
-        self.take_count = QSpinBox(); self.take_count.setRange(1, 999); self.take_count.setValue(1)
-        self.take_count.setFixedWidth(54); self.take_count.setStyleSheet(SS["spin"])
-        av.addLayout(row("Take Item", self.take_item_edit, self.take_count))
-
-        self.log_topic_edit = QLineEdit(); self.log_topic_edit.setPlaceholderText("Log topic  e.g. CH1_JoinPsi")
-        self.log_topic_edit.setStyleSheet(SS["field"])
-        self.log_status_cmb = QComboBox()
-        self.log_status_cmb.addItems(["LOG_RUNNING", "LOG_SUCCESS", "LOG_FAILED", "LOG_NOTE"])
-        self.log_status_cmb.setFixedWidth(130); self.log_status_cmb.setStyleSheet(SS["combo"])
-        av.addLayout(row("Log Topic", self.log_topic_edit, self.log_status_cmb))
-
-        self.log_entry_edit = QLineEdit(); self.log_entry_edit.setPlaceholderText("Log entry text — shown in quest log…")
-        self.log_entry_edit.setStyleSheet(SS["field"])
-        av.addLayout(row("Log Entry", self.log_entry_edit))
-
-        if not self.is_followup:
             self.stop_cb = QCheckBox("AI_StopProcessInfos at end")
             self.stop_cb.setChecked(True); self.stop_cb.setStyleSheet(SS["check"])
             sr = QHBoxLayout(); sr.addWidget(self.stop_cb); sr.addStretch()
             av.addLayout(sr)
         else:
-            self.stop_cb = QCheckBox()
-            note = QLabel("This reply closes back to the main dialog automatically.")
+            # Follow-up scenes don't have instance metadata — keep placeholders
+            # so get_block()/load_block() stay uniform across both kinds.
+            self.desc_edit = QLineEdit(); self.perm_cb = QCheckBox(); self.imp_cb = QCheckBox()
+            self.trade_cb = QCheckBox(); self.cond_edit = QLineEdit(); self.stop_cb = QCheckBox()
+            note = QLabel("This reply closes back to the main dialog automatically.\n"
+                           "Give/take items, XP, and log entries are added inline in the Dialog tab.")
+            note.setWordWrap(True)
             note.setStyleSheet(f"color:{THEME['text_muted']}; font-size:{THEME['font_size_small']}; font-style:italic;")
             av.addWidget(note)
         av.addStretch()
@@ -373,12 +453,10 @@ class BlockEditor(QWidget):
         tabs.addTab(adv_tab, "Advanced")
         root.addWidget(tabs, 1)
 
-        for w in [self.name_edit, self.desc_edit, self.cond_edit, self.xp_edit,
-                  self.give_item_edit, self.take_item_edit, self.log_topic_edit, self.log_entry_edit]:
+        for w in [self.name_edit, self.desc_edit, self.cond_edit]:
             w.textChanged.connect(self._emit)
         for w in [self.perm_cb, self.imp_cb, self.trade_cb, self.stop_cb]:
             w.stateChanged.connect(self._emit)
-        self.log_status_cmb.currentTextChanged.connect(self._emit)
 
     def _emit(self, *_):
         if getattr(self, "_suppress_emit", False): return
@@ -416,12 +494,7 @@ class BlockEditor(QWidget):
             b.is_trade = self.trade_cb.isChecked()
             b.condition_expr = self.cond_edit.text().strip()
             b.stop_after = self.stop_cb.isChecked()
-        b.give_xp = self.xp_edit.text().strip()
-        b.give_item = self.give_item_edit.text().strip(); b.give_item_count = self.give_count.value()
-        b.take_item = self.take_item_edit.text().strip(); b.take_item_count = self.take_count.value()
-        b.log_topic = self.log_topic_edit.text().strip(); b.log_entry = self.log_entry_edit.text().strip()
-        b.log_status = self.log_status_cmb.currentText()
-        b.lines = self.chat.get_lines()
+        b.entries = self.chat.get_entries()
         for i in range(self.choices_layout.count()):
             w = self.choices_layout.itemAt(i).widget()
             if isinstance(w, ChoiceWidget): b.choices.append(w.get_choice())
@@ -437,13 +510,7 @@ class BlockEditor(QWidget):
             self.trade_cb.setChecked(bool(b.is_trade))
             self.cond_edit.setText(b.condition_expr)
             self.stop_cb.setChecked(bool(b.stop_after))
-        self.xp_edit.setText(b.give_xp)
-        self.give_item_edit.setText(b.give_item); self.give_count.setValue(b.give_item_count or 1)
-        self.take_item_edit.setText(b.take_item); self.take_count.setValue(b.take_item_count or 1)
-        self.log_topic_edit.setText(b.log_topic); self.log_entry_edit.setText(b.log_entry)
-        idx = self.log_status_cmb.findText(b.log_status)
-        if idx >= 0: self.log_status_cmb.setCurrentIndex(idx)
-        self.chat.load_lines(b.lines)
+        self.chat.load_entries(b.entries)
         self._clear_choices()
         for ch in b.choices:
             self._add_choice(ch, is_loaded=True)

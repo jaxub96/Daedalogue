@@ -9,33 +9,34 @@ from PyQt6.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat
 
 THEME = {
     # ── Colors ────────────────────────────────────────────────────────────────
-    # Backgrounds (light → dark), soft neutral palette
-    "bg_main":          "#faf9f6",   # window / editor background
-    "bg_panel":         "#f2f0eb",   # sidebar, group boxes
-    "bg_bar":           "#eeece5",   # top bar
-    "bg_border":        "#e2ddd2",   # borders, separators, scrollbar handle
-    "bg_input":         "#ffffff",   # text field / spinbox background
-    "bg_input_border":  "#ddd7ca",   # text field border
-    "bg_code":          "#fcfbf9",   # code preview background
-    "bg_choice":        "#f1f4ef",   # choice row background
-    "bg_choice_input":  "#ffffff",   # choice label input
+   # Backgrounds
+"bg_main":          "#23211F",
+"bg_panel":         "#2B2825",
+"bg_bar":           "#1D1B19",
+"bg_border":        "#49433C",
+"bg_input":         "#322D29",
+"bg_input_border":  "#5B5148",
+"bg_code":          "#272320",
+"bg_choice":        "#372E29",
+"bg_choice_input":  "#302925",
 
-    # Text
-    "text_primary":     "#33312c",   # main body text
-    "text_secondary":   "#726b5c",   # labels, secondary
-    "text_muted":       "#aca290",   # placeholders, inactive
+# Text
+"text_primary":     "#D8CEBD",
+"text_secondary":   "#B4A795",
+"text_muted":       "#867A6B",
 
-    # Accents — soft, calm
-    "accent_primary":   "#7c8f8a",   # muted teal  — active, selected, hero
-    "accent_hover":     "#657a75",   # darker teal for hover
-    "accent_secondary": "#9caf88",   # soft sage green — choices, npc
-    "accent_gold":      "#bfa26a",   # soft muted gold — section labels
+# Accents
+"accent_primary":   "#8B5948",   # worn leather
+"accent_hover":     "#A66A54",   # polished leather
+"accent_secondary": "#74614F",   # weathered wood
+"accent_gold":      "#B39A69",   # antique brass
 
-    # Chat bubbles
-    "bubble_npc_bg":     "#f0ece1",
-    "bubble_npc_text":   "#5c5748",
-    "bubble_hero_bg":    "#e2ecea",
-    "bubble_hero_text":  "#3f5854",
+# Dialogue
+"bubble_npc_bg":    "#342F2B",
+"bubble_npc_text":  "#D2C5B1",
+
+"bubble_hero_bg":   "#47332C",
+"bubble_hero_text": "#E2D2BF",
 
     # Syntax highlighting (code preview only)
     "syn_keyword":      "#8a7a68",
@@ -45,20 +46,20 @@ THEME = {
     "syn_comment":      "#b0a894",
     "syn_number":       "#6a86a0",
 
-    # ── Typography ────────────────────────────────────────────────────────────
+ # ── Typography ────────────────────────────────────────────────────────────
     "font_ui":          "Segoe UI, Helvetica Neue, Arial, sans-serif",
     "font_code":        "Cascadia Code, Consolas, monospace",
-    "font_size_ui":     "12px",
-    "font_size_small":  "11px",
-    "font_size_tiny":   "9px",
+    "font_size_ui":     "16px",
+    "font_size_small":  "12px",
+    "font_size_tiny":   "11px",
     "font_size_title":  "14px",
     "font_size_placeholder": "15px",
     "font_size_code":   10,          # pt, used for QFont object
 
     # ── Geometry ──────────────────────────────────────────────────────────────
-    "radius_sm":        "4px",
-    "radius_md":        "6px",
-    "radius_lg":        "10px",
+    "radius_sm":        "1px",
+    "radius_md":        "3px",
+    "radius_lg":        "5px",
     "border_width":     "1px",
     "topbar_height":    52,
     "sidebar_width":    196,

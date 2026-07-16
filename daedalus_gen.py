@@ -24,6 +24,32 @@ class DialogChoice:
         self.label = label
         self.func_name = func_name
 
+class EffectEntry:
+    """A give-item / take-item / give-xp / log-entry effect, placed inline
+    among a scene's DialogLines at whatever point it should fire."""
+    def __init__(self, kind, **fields):
+        self.kind = kind          # "give_item" | "take_item" | "give_xp" | "log"
+        self.item = fields.get("item", "")
+        self.count = fields.get("count", 1)
+        self.xp = fields.get("xp", "")
+        self.log_topic = fields.get("log_topic", "")
+        self.log_status = fields.get("log_status", "LOG_RUNNING")
+        self.log_entry = fields.get("log_entry", "")
+
+    def summary(self):
+        """Short human-readable label, used by the effect bubble in the UI."""
+        if self.kind == "give_item":
+            return f"Give {self.count}× {self.item}" if self.item else "Give item"
+        if self.kind == "take_item":
+            return f"Take {self.count}× {self.item}" if self.item else "Take item"
+        if self.kind == "give_xp":
+            return f"XP: {self.xp}" if self.xp else "Give XP"
+        if self.kind == "log":
+            parts = [self.log_topic or "Log"]
+            if self.log_status: parts.append(self.log_status)
+            return " · ".join(parts)
+        return self.kind
+
 
 class DialogBlock:
     """A dialog scene. Either a top-level C_INFO instance, or a follow-up
@@ -31,17 +57,17 @@ class DialogBlock:
     def __init__(self):
         self.name = ""; self.description = ""; self.nr = 1
         self.permanent = 0; self.important = 0; self.condition_expr = ""
-        self.lines: list[DialogLine] = []
+        self.entries: list = []       # DialogLine and EffectEntry, in flow order
         self.choices: list[DialogChoice] = []
-        self.give_xp = ""; self.give_item = ""; self.give_item_count = 1
-        self.take_item = ""; self.take_item_count = 1
-        self.log_topic = ""; self.log_entry = ""; self.log_status = "LOG_RUNNING"
         self.stop_after = True; self.is_exit = False; self.is_trade = False
 
         # Follow-up (choice) scenes only:
         self.is_followup = False
-        self.func_name = ""          # fixed export identifier, e.g. DIA_Gomez_Reward_Choice1
+        self.func_name = ""          # fixed export identifier, e.g. DIA_Gomez_Reward_ItemChoice
         self.parent_block = None     # the DialogBlock this is a choice of (runtime link, not exported)
+
+    def lines(self):
+        return [e for e in self.entries if isinstance(e, DialogLine)]
 
 
 # ── Code generator ────────────────────────────────────────────────────────────
@@ -52,55 +78,62 @@ def voice_code(bname, idx, speaker):
 
 def _log_type(s): return "LOG_MISSION" if ("RUNNING" in s or "SUCCESS" in s) else "LOG_NOTE"
 
-def export_block_name(npc_name, block_name):
-    """The exported instance identifier for a top-level scene, e.g. DIA_Gomez_Hello."""
-    safe = sanitize(npc_name)
+def export_block_name(npc_id, block_name):
+    """The exported instance identifier for a top-level scene, e.g. DIA_KDF_405_Torrez_Hello."""
+    safe = sanitize(npc_id)
     bn = sanitize(block_name) if block_name else f"DIA_{safe}_Block"
     if not bn.startswith("DIA_"): bn = f"DIA_{safe}_{bn}"
     return bn
 
+def export_followup_name(parent_bn, block_name):
+    suffix = sanitize(block_name) if block_name else "Choice"
+    return f"{parent_bn}_{suffix}"
 
-def _give_item_lines(b, target="hero"):
+
+def _entry_lines(entries, bn):
+    """Render a scene's entries (dialog lines + effects) in the exact order
+    they appear, so effects land at the point in the conversation they were
+    placed at. Voice-code indices only advance for actual spoken lines."""
     out = []
-    if not b.give_item: return out
-    if b.give_item_count > 1:
-        out.append(f"\tCreateInvItems(self, {b.give_item}, {b.give_item_count});")
-    else:
-        out.append(f"\tCreateInvItem(self, {b.give_item});")
-    out.append(f"\tB_GiveInvItems (self, {target}, {b.give_item}, {b.give_item_count});")
+    i = 0
+    for e in entries:
+        if isinstance(e, DialogLine):
+            sf = "other" if e.speaker == "other" else "self"
+            st = "self"  if e.speaker == "other" else "other"
+            out.append(f'\tAI_Output ({sf}, {st},"{voice_code(bn, i, e.speaker)}"); //{e.text}')
+            i += 1
+        elif e.kind == "give_item":
+            if not e.item: continue
+            if e.count > 1:
+                out.append(f"\tCreateInvItems(self, {e.item}, {e.count});")
+            else:
+                out.append(f"\tCreateInvItem(self, {e.item});")
+            out.append(f"\tB_GiveInvItems (self, hero, {e.item}, {e.count});")
+        elif e.kind == "take_item":
+            if not e.item: continue
+            out.append(f"\tB_GiveInvItems(other, self, {e.item}, {e.count});")
+        elif e.kind == "give_xp":
+            if not e.xp: continue
+            out.append(f"\tB_GiveXP({e.xp});")
+        elif e.kind == "log":
+            if not e.log_topic: continue
+            out.append(f"\tLog_CreateTopic\t({e.log_topic}, {_log_type(e.log_status)});")
+            out.append(f"\tLog_SetTopicStatus\t({e.log_topic}, {e.log_status});")
+            if e.log_entry:
+                out.append(f'\tB_LogEntry\t({e.log_topic},"{e.log_entry}");')
     return out
 
-def _effect_lines(b):
-    out = []
-    if b.give_xp: out.append(f"\tB_GiveXP({b.give_xp});")
-    out += _give_item_lines(b)
-    if b.take_item: out.append(f"\tB_GiveInvItems(other, self, {b.take_item}, {b.take_item_count});")
-    if b.log_topic:
-        out.append(f"\tLog_CreateTopic\t({b.log_topic}, {_log_type(b.log_status)});")
-        out.append(f"\tLog_SetTopicStatus\t({b.log_topic}, {b.log_status});")
-    if b.log_entry:
-        out.append(f'\tB_LogEntry\t({b.log_topic or "LOG_TOPIC"},"{b.log_entry}");')
-    return out
-
-def _output_lines(b, bn):
-    out = []
-    for i, dl in enumerate(b.lines):
-        sf = "other" if dl.speaker == "other" else "self"
-        st = "self"  if dl.speaker == "other" else "other"
-        out.append(f'\tAI_Output ({sf}, {st},"{voice_code(bn, i, dl.speaker)}"); //{dl.text}')
-    return out
 
 def _render_followup(b, all_blocks, root_bn):
     """Render one choice follow-up as a `func void` block, then its own
     children (choices made inside this follow-up), recursively."""
     children = [c for c in all_blocks if c.parent_block is b]
     out = [f"func void {b.func_name}()", "{"]
-    out += _output_lines(b, b.func_name)
+    out += _entry_lines(b.entries, b.func_name)
     if b.choices or children:
         out.append(f"\tInfo_ClearChoices\t({b.func_name});")
         for ch in b.choices:
             out.append(f'\tInfo_AddChoice\t({b.func_name},"{ch.label}",{ch.func_name});')
-    out += _effect_lines(b)
     if not b.choices and not children:
         out.append(f"\tInfo_ClearChoices\t({root_bn});")
     out += ["};", ""]
@@ -110,7 +143,7 @@ def _render_followup(b, all_blocks, root_bn):
 
 
 def generate_dia_file(npc_name, npc_id, blocks):
-    safe = sanitize(npc_name)
+    safe = sanitize(npc_id)
     out = [f"// Dialog file for {npc_name} ({npc_id})",
            "// Generated by Gothic Dialog Generator", ""]
 
@@ -125,7 +158,7 @@ def generate_dia_file(npc_name, npc_id, blocks):
 
     top_level = [b for b in blocks if not b.is_exit and not b.is_followup]
     for b in top_level:
-        bn = export_block_name(npc_name, b.name)
+        bn = export_block_name(npc_id, b.name)
         out += ["// " + "="*60, f"// \t\t\t{b.description or b.name}", "// " + "="*60,
                 f"instance {bn} (C_INFO)", "{",
                 f"\tnpc\t\t\t= {npc_id};", f"\tnr\t\t\t= {b.nr};",
@@ -141,11 +174,10 @@ def generate_dia_file(npc_name, npc_id, blocks):
             out.append("\treturn 1;")
         out += ["};", "", f"FUNC VOID {bn}_Info()", "{"]
         if b.choices: out.append(f"\tInfo_ClearChoices\t({bn});")
-        out += _output_lines(b, bn)
+        out += _entry_lines(b.entries, bn)
         if b.choices:
             for ch in b.choices:
                 out.append(f'\tInfo_AddChoice\t({bn},"{ch.label}",{ch.func_name});')
-        out += _effect_lines(b)
         if b.stop_after and not b.choices: out.append("\tAI_StopProcessInfos\t(self);")
         out += ["};", ""]
 
@@ -155,10 +187,11 @@ def generate_dia_file(npc_name, npc_id, blocks):
     return "\n".join(out)
 
 
-def generate_constants_file(npc_name, blocks):
-    topics = sorted({b.log_topic for b in blocks if b.log_topic})
-    if not topics: return f"// No log constants needed for {npc_name}\n"
-    out = [f"// Log constants for {npc_name} dialogs",
+def generate_constants_file(npc_id, blocks):
+    topics = sorted({e.log_topic for b in blocks for e in b.entries
+                      if not isinstance(e, DialogLine) and e.kind == "log" and e.log_topic})
+    if not topics: return f"// No log constants needed for {npc_id}\n"
+    out = [f"// Log constants for {npc_id} dialogs",
            "// Add to Constants.d or a dedicated _CONST.d", "",
            "// ── Log Topic IDs ──────────────────────────────────"]
     for i, t in enumerate(topics, 100): out.append(f"const int {t} = {i};")
@@ -168,13 +201,15 @@ def generate_constants_file(npc_name, blocks):
 
 def export_plain_dialog(blocks):
     """A simple 'Speaker - line' reference text, scene by scene, in reading
-    order (each scene followed immediately by any choice follow-ups it has)."""
+    order (each scene followed immediately by any choice follow-ups it has).
+    Effects are skipped — this is dialog-only reference text."""
     out = []
 
     def walk(b):
-        if b.lines:
+        spoken = b.lines()
+        if spoken:
             out.append(f"-- {b.name or 'Scene'} --")
-            for ln in b.lines:
+            for ln in spoken:
                 out.append(f"{speaker_display_name(ln.speaker)} - {ln.text}")
             out.append("")
         for c in [c for c in blocks if c.parent_block is b]:
@@ -187,58 +222,53 @@ def export_plain_dialog(blocks):
 
 
 # ── Parser (round-trips files produced by this tool) ───────────────────────────
+_LINE_RE   = re.compile(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)')
+_CHOICE_RE = re.compile(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);')
+_GIVE_RE   = re.compile(
+    r'(?:CreateInvItems?\(self,\s*([^,)]+)(?:,\s*(\d+))?\);\s*)?'
+    r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);')
+_TAKE_RE   = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);')
+_XP_RE     = re.compile(r'B_GiveXP\(([^)]*)\);')
+_LOG_RE    = re.compile(
+    r'Log_CreateTopic\s*\(([^,]+),\s*\w+\);\s*'
+    r'Log_SetTopicStatus\s*\(([^,]+),\s*(\w+)\);'
+    r'(?:\s*B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);)?')
+
+
 def _parse_body(seg, bn):
-    """Pull the shared pieces (lines, choices, effects) out of one function
+    """Pull the shared pieces (entries in order, choices) out of one function
     body — used for both top-level Info() bodies and follow-up func bodies."""
-    b_lines, b_choices = [], []
-    for m in re.finditer(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)', seg):
-        sf, txt = m.group(1), m.group(3).strip()
-        speaker = "other" if sf == "other" else "self"
-        b_lines.append(DialogLine(speaker=speaker, text=txt))
+    found = []
+    for m in _LINE_RE.finditer(seg):
+        speaker = "other" if m.group(1) == "other" else "self"
+        found.append((m.start(), DialogLine(speaker=speaker, text=m.group(3).strip())))
+    for m in _GIVE_RE.finditer(seg):
+        item = (m.group(1) or m.group(3)).strip()
+        count = int(m.group(2) or m.group(4) or 1)
+        found.append((m.start(), EffectEntry("give_item", item=item, count=count)))
+    for m in _TAKE_RE.finditer(seg):
+        found.append((m.start(), EffectEntry("take_item", item=m.group(1).strip(), count=int(m.group(2)))))
+    for m in _XP_RE.finditer(seg):
+        found.append((m.start(), EffectEntry("give_xp", xp=m.group(1).strip())))
+    for m in _LOG_RE.finditer(seg):
+        found.append((m.start(), EffectEntry(
+            "log", log_topic=m.group(1).strip(), log_status=m.group(3).strip(),
+            log_entry=(m.group(4) or ""))))
 
-    for m in re.finditer(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);', seg):
-        b_choices.append(DialogChoice(label=m.group(1), func_name=m.group(2)))
+    found.sort(key=lambda x: x[0])
+    entries = [e for _, e in found]
 
-    give_xp = ""
-    xp_m = re.search(r'B_GiveXP\(([^)]*)\);', seg)
-    if xp_m: give_xp = xp_m.group(1).strip()
-
-    give_item, give_item_count = "", 1
-    gi_m = re.search(r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);', seg)
-    if gi_m: give_item = gi_m.group(1).strip(); give_item_count = int(gi_m.group(2))
-
-    take_item, take_item_count = "", 1
-    ti_m = re.search(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);', seg)
-    if ti_m: take_item = ti_m.group(1).strip(); take_item_count = int(ti_m.group(2))
-
-    log_topic, log_status = "", "LOG_RUNNING"
-    status_m = re.search(r'Log_SetTopicStatus\s*\(([^,]+),\s*(\w+)\);', seg)
-    if status_m:
-        log_topic, log_status = status_m.group(1).strip(), status_m.group(2).strip()
-    else:
-        topic_m = re.search(r'Log_CreateTopic\s*\(([^,]+),', seg)
-        if topic_m: log_topic = topic_m.group(1).strip()
-
-    log_entry = ""
-    entry_m = re.search(r'B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);', seg)
-    if entry_m: log_entry = entry_m.group(1)
+    choices = [DialogChoice(label=m.group(1), func_name=m.group(2))
+               for m in _CHOICE_RE.finditer(seg)]
 
     stop_after = bool(re.search(r'AI_StopProcessInfos\s*\(self\);', seg))
-
-    return dict(lines=b_lines, choices=b_choices, give_xp=give_xp,
-                give_item=give_item, give_item_count=give_item_count,
-                take_item=take_item, take_item_count=take_item_count,
-                log_topic=log_topic, log_status=log_status,
-                log_entry=log_entry, stop_after=stop_after)
+    return dict(entries=entries, choices=choices, stop_after=stop_after)
 
 
 def _apply_body(b, body):
-    b.lines = body["lines"]; b.choices = body["choices"]
-    b.give_xp = body["give_xp"]
-    b.give_item = body["give_item"]; b.give_item_count = body["give_item_count"]
-    b.take_item = body["take_item"]; b.take_item_count = body["take_item_count"]
-    b.log_topic = body["log_topic"]; b.log_status = body["log_status"]
-    b.log_entry = body["log_entry"]; b.stop_after = body["stop_after"]
+    b.entries = body["entries"]
+    b.choices = body["choices"]
+    b.stop_after = body["stop_after"]
 
 
 def _parse_followups(parent_block, choices, full_text, blocks_out):
@@ -262,7 +292,7 @@ def parse_dia_file(text):
     header_m = re.search(r'//\s*Dialog file for\s+(.*?)\s*\((.*?)\)', text)
     npc_name = header_m.group(1).strip() if header_m else ""
     npc_id   = header_m.group(2).strip() if header_m else ""
-    prefix = f"DIA_{sanitize(npc_name)}_"
+    prefix = f"DIA_{sanitize(npc_id)}_"
 
     blocks = []
     segments = re.split(r'\binstance\s+', text)
