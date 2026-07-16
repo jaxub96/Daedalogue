@@ -28,10 +28,11 @@ class EffectEntry:
     """A give-item / take-item / give-xp / log-entry effect, placed inline
     among a scene's DialogLines at whatever point it should fire."""
     def __init__(self, kind, **fields):
-        self.kind = kind          # "give_item" | "take_item" | "give_xp" | "log"
+        self.kind = kind          # "give_item" | "take_item" | "give_xp" | "log" | "lead" | "follow"
         self.item = fields.get("item", "")
         self.count = fields.get("count", 1)
         self.xp = fields.get("xp", "")
+        self.routine = fields.get("routine", "PLACEHOLDER_LEAD_ROUTINE")
         self.log_topic = fields.get("log_topic", "")
         self.log_status = fields.get("log_status", "LOG_RUNNING")
         self.log_entry = fields.get("log_entry", "")
@@ -48,6 +49,10 @@ class EffectEntry:
             parts = [self.log_topic or "Log"]
             if self.log_status: parts.append(self.log_status)
             return " · ".join(parts)
+        if self.kind == "lead":
+            return f"NPC leads Hero ({self.routine})"
+        if self.kind == "follow":
+            return f"NPC follows Hero"
         return self.kind
 
 
@@ -115,6 +120,19 @@ def _entry_lines(entries, bn):
         elif e.kind == "give_xp":
             if not e.xp: continue
             out.append(f"\tB_GiveXP({e.xp});")
+        elif e.kind == "lead":
+            out.append("\tAI_StopProcessInfos(self);")
+            out.append("\tself.aivar[AIV_PARTYMEMBER] = TRUE;")
+            out.append(f'\tNpc_ExchangeRoutine(self,"{e.routine or "PLACEHOLDER_LEAD_ROUTINE"}");')
+        elif e.kind == "follow":
+            out.append("\tif(C_BodyStateContains(self,BS_SIT))")
+            out.append("\t{")
+            out.append("\t\tAI_Standup(self);")
+            out.append("\t\tB_TurnToNpc(self,other);")
+            out.append("\t};")
+            out.append("\tAI_StopProcessInfos(self);")
+            out.append('\tNpc_ExchangeRoutine(self,"FOLLOW");')
+            out.append("\tself.aivar[AIV_PARTYMEMBER] = TRUE;")
         elif e.kind == "log":
             if not e.log_topic: continue
             out.append(f"\tLog_CreateTopic\t({e.log_topic}, {_log_type(e.log_status)});")
@@ -222,14 +240,15 @@ def export_plain_dialog(blocks):
 
 
 # ── Parser (round-trips files produced by this tool) ───────────────────────────
-_LINE_RE   = re.compile(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)')
-_CHOICE_RE = re.compile(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);')
-_GIVE_RE   = re.compile(
+_LINE_RE     = re.compile(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)')
+_CHOICE_RE   = re.compile(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);')
+_ROUTINE_RE  = re.compile(r'Npc_ExchangeRoutine\s*\(self,\s*"([^"]*)"\);')
+_GIVE_RE     = re.compile(
     r'(?:CreateInvItems?\(self,\s*([^,)]+)(?:,\s*(\d+))?\);\s*)?'
     r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);')
-_TAKE_RE   = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);')
-_XP_RE     = re.compile(r'B_GiveXP\(([^)]*)\);')
-_LOG_RE    = re.compile(
+_TAKE_RE     = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);')
+_XP_RE       = re.compile(r'B_GiveXP\(([^)]*)\);')
+_LOG_RE      = re.compile(
     r'Log_CreateTopic\s*\(([^,]+),\s*\w+\);\s*'
     r'Log_SetTopicStatus\s*\(([^,]+),\s*(\w+)\);'
     r'(?:\s*B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);)?')
@@ -250,6 +269,12 @@ def _parse_body(seg, bn):
         found.append((m.start(), EffectEntry("take_item", item=m.group(1).strip(), count=int(m.group(2)))))
     for m in _XP_RE.finditer(seg):
         found.append((m.start(), EffectEntry("give_xp", xp=m.group(1).strip())))
+    for m in _ROUTINE_RE.finditer(seg):
+        routine = m.group(1).strip()
+        if routine == "FOLLOW":
+            found.append((m.start(), EffectEntry("follow")))
+        else:
+            found.append((m.start(), EffectEntry("lead", routine=routine)))
     for m in _LOG_RE.finditer(seg):
         found.append((m.start(), EffectEntry(
             "log", log_topic=m.group(1).strip(), log_status=m.group(3).strip(),

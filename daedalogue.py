@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
 
         self.dia_preview = QTextEdit(); self.dia_preview.setReadOnly(True); self.dia_preview.setFont(mono_font())
         self.dia_preview.setStyleSheet(
-            f"QTextEdit {{ background:{THEME['bg_code']}; color:{THEME['text_primary']}; "
+            f"QTextEdit {{ background:{THEME['bg_panel']}; color:{THEME['text_primary']}; "
             f"border:none; padding:10px; }}")
         DaedalusHighlighter(self.dia_preview.document())
         pv.addWidget(self.dia_preview)

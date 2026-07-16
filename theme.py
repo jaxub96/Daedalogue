@@ -8,28 +8,19 @@ import re
 from PyQt6.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat
 
 THEME = {
-    # ── Colors ────────────────────────────────────────────────────────────────
-   # Backgrounds
-"bg_main":          "#23211F",
-"bg_panel":         "#2B2825",
-"bg_bar":           "#1D1B19",
-"bg_border":        "#49433C",
-"bg_input":         "#322D29",
-"bg_input_border":  "#5B5148",
-"bg_code":          "#272320",
-"bg_choice":        "#372E29",
-"bg_choice_input":  "#302925",
+"bg_main":          "#f1e9d8",   # aged parchment
+"bg_panel":         "#e8ddc4",   # darker parchment
+"bg_bar":           "#ddcfa8",   # worn leather
+"bg_border":        "#b8a374",   # brass/leather line — was a flat gray, now has warmth
+"bg_input":         "#f1e9d8",   # same as main bg, but with border
+"bg_input_border":  "#b8a374",   # brass/leather line —
+"text_primary":     "#2e2418",   # iron-gall ink
+"text_secondary":   "#5a4a35",
+"text_muted":        "#8c7a5c",
 
-# Text
-"text_primary":     "#D8CEBD",
-"text_secondary":   "#B4A795",
-"text_muted":       "#867A6B",
-
-# Accents
-"accent_primary":   "#8B5948",   # worn leather
-"accent_hover":     "#A66A54",   # polished leather
-"accent_secondary": "#74614F",   # weathered wood
-"accent_gold":      "#B39A69",   # antique brass
+"accent_primary":   "#8a3a2a",   # oxblood wax-seal red — replaces the teal
+"accent_hover":     "#6e2d20",
+"accent_secondary": "#4d5c3f",   # moss/forest green — replaces the sage
 
 # Dialogue
 "bubble_npc_bg":    "#342F2B",
@@ -47,7 +38,8 @@ THEME = {
     "syn_number":       "#6a86a0",
 
  # ── Typography ────────────────────────────────────────────────────────────
-    "font_ui":          "Segoe UI, Helvetica Neue, Arial, sans-serif",
+    "font_display":     "Cinzel, Trajan Pro, Georgia, serif",   # new key
+    "font_ui":          "Segoe UI, Helvetica Neue, Arial, sans-serif",   # unchanged — body stays legible
     "font_code":        "Cascadia Code, Consolas, monospace",
     "font_size_ui":     "16px",
     "font_size_small":  "12px",
@@ -83,6 +75,7 @@ def _ss_field():
         f"  font-family:{t['font_ui']}; }}"
         f"QLineEdit:focus {{ border:{t['border_width']} solid {t['accent_primary']}; }}"
         f"QLineEdit::placeholder {{ color:{t['text_muted']}; }}"
+        
     )
 
 def _ss_field_readonly():
@@ -129,12 +122,14 @@ def _ss_check():
 def _ss_group():
     t = THEME
     return (
-        f"QGroupBox {{ color:{t['accent_gold']}; font-weight:600; font-size:{t['font_size_small']}; "
+        f"QGroupBox {{ color:{t['accent_secondary']}; font-weight:600; font-size:{t['font_size_small']}; "
         f"  letter-spacing:0.3px; border:{t['border_width']} solid {t['bg_border']}; "
         f"  border-radius:{t['radius_lg']}; margin-top:10px; padding-top:6px; "
         f"  background:{t['bg_panel']}; font-family:{t['font_ui']}; }}"
         f"QGroupBox::title {{ subcontrol-origin:margin; left:10px; "
         f"  background:{t['bg_panel']}; padding:0 4px; }}"
+        f"border: 2px double {THEME['bg_border']};"
+        
     )
 
 def _ss_add_btn():

@@ -110,7 +110,14 @@ class ChatBubble(QFrame):
 class EffectBubble(QFrame):
     """Shows one inline effect (give/take item, XP, log entry), centered
     and visually distinct from spoken lines. Remove and re-insert to edit."""
-    ICONS = {"give_item": "🎁", "take_item": "📤", "give_xp": "⭐", "log": "📜"}
+    ICONS = {
+        "give_item": "🎁",
+        "take_item": "📤",
+        "give_xp": "⭐",
+        "log": "📜",
+        "lead": "🧭",
+        "follow": "🧭",
+    }
 
     def __init__(self, entry: EffectEntry, on_remove=None):
         super().__init__()
@@ -149,8 +156,8 @@ class EffectInsertRow(QWidget):
         lay = QHBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(6)
 
         self.kind_cmb = QComboBox()
-        self.kind_cmb.addItems(["Give Item", "Take Item", "Give XP", "Log Entry"])
-        self.kind_cmb.setFixedWidth(104); self.kind_cmb.setStyleSheet(SS["combo"])
+        self.kind_cmb.addItems(["Give Item", "Take Item", "Give XP", "Lead", "Follow", "Log Entry"])
+        self.kind_cmb.setFixedWidth(118); self.kind_cmb.setStyleSheet(SS["combo"])
         self.kind_cmb.currentIndexChanged.connect(self._update_visibility)
 
         self.item_edit = QLineEdit(); self.item_edit.setPlaceholderText("Item  e.g. ItAm_Prot_Fire_01")
@@ -160,6 +167,9 @@ class EffectInsertRow(QWidget):
 
         self.xp_edit = QLineEdit(); self.xp_edit.setPlaceholderText("XP constant  e.g. XP_KilledBandit")
         self.xp_edit.setStyleSheet(SS["field"])
+
+        self.lead_edit = QLineEdit(); self.lead_edit.setPlaceholderText("Lead routine  e.g. Rtn_Lead_MyNpc")
+        self.lead_edit.setStyleSheet(SS["field"])
 
         self.topic_edit = QLineEdit(); self.topic_edit.setPlaceholderText("Log topic  e.g. CH1_JoinPsi")
         self.topic_edit.setStyleSheet(SS["field"])
@@ -176,18 +186,21 @@ class EffectInsertRow(QWidget):
         lay.addWidget(self.kind_cmb)
         lay.addWidget(self.item_edit, 1); lay.addWidget(self.count_spin)
         lay.addWidget(self.xp_edit, 1)
+        lay.addWidget(self.lead_edit, 1)
         lay.addWidget(self.topic_edit, 1); lay.addWidget(self.status_cmb); lay.addWidget(self.entry_edit, 1)
         lay.addWidget(insert_btn)
 
         self._update_visibility()
 
     def _update_visibility(self):
-        kind = self.kind_cmb.currentIndex()   # 0 give, 1 take, 2 xp, 3 log
+        kind = self.kind_cmb.currentIndex()
         show_item = kind in (0, 1)
         show_xp = kind == 2
-        show_log = kind == 3
+        show_lead = kind == 3
+        show_log = kind == 5
         self.item_edit.setVisible(show_item); self.count_spin.setVisible(show_item)
         self.xp_edit.setVisible(show_xp)
+        self.lead_edit.setVisible(show_lead)
         self.topic_edit.setVisible(show_log); self.status_cmb.setVisible(show_log); self.entry_edit.setVisible(show_log)
 
     def _insert(self):
@@ -201,13 +214,18 @@ class EffectInsertRow(QWidget):
         elif kind == 2:
             if not self.xp_edit.text().strip(): return
             e = EffectEntry("give_xp", xp=self.xp_edit.text().strip())
+        elif kind == 3:
+            routine = self.lead_edit.text().strip() or "PLACEHOLDER_LEAD_ROUTINE"
+            e = EffectEntry("lead", routine=routine)
+        elif kind == 4:
+            e = EffectEntry("follow")
         else:
             if not self.topic_edit.text().strip(): return
             e = EffectEntry("log", log_topic=self.topic_edit.text().strip(),
                              log_status=self.status_cmb.currentText(),
                              log_entry=self.entry_edit.text().strip())
         if self.on_insert: self.on_insert(e)
-        self.item_edit.clear(); self.xp_edit.clear(); self.topic_edit.clear(); self.entry_edit.clear()
+        self.item_edit.clear(); self.xp_edit.clear(); self.lead_edit.clear(); self.topic_edit.clear(); self.entry_edit.clear()
         self.count_spin.setValue(1)
 
 
