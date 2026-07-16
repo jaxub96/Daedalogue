@@ -10,6 +10,6 @@ else {
         $message = "auto save"
     }
 
-    git commit -m "$message $(Get-Date)"
+    git commit -m "$message"
     git push
 }
