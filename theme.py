@@ -8,58 +8,64 @@ import re
 from PyQt6.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat
 
 THEME = {
-    "bg_main": "#f1e9d8",  # aged parchment
-    "bg_panel": "#e8ddc4",  # darker parchment
-    "bg_bar": "#ddcfa8",  # worn leather
-    "bg_border": "#b8a374",  # brass/leather line — was a flat gray, now has warmth
-    "bg_input": "#f1e9d8",  # same as main bg, but with border
-    "bg_input_border": "#b8a374",  # brass/leather line —
-    "bg_choice": "#372E29",
-    "bg_choice_input": "#302925",
-    "text_primary": "#2e2418",  # iron-gall ink
-    "text_secondary": "#5a4a35",
-    "text_muted": "#8c7a5c",
-    "accent_primary": "#8a3a2a",  # oxblood wax-seal red — replaces the teal
-    "accent_hover": "#6e2d20",
-    "accent_secondary": "#4d5c3f",  # moss/forest green — replaces the sage
-    # Dialogue
-    "bubble_npc_bg": "#342F2B",
-    "bubble_npc_text": "#D2C5B1",
-    "bubble_hero_bg": "#47332C",
-    "bubble_hero_text": "#E2D2BF",
+"bg_main":          "#f1e9d8",   # aged parchment
+"bg_panel":         "#e8ddc4",   # darker parchment
+"bg_bar":           "#ddcfa8",   # worn leather
+"bg_border":        "#b8a374",   # brass/leather line — was a flat gray, now has warmth
+"bg_input":         "#f1e9d8",   # same as main bg, but with border
+"bg_input_border":  "#b8a374",   # brass/leather line —
+"bg_choice":        "#372E29",
+"bg_choice_input":  "#302925",
+"text_primary":     "#2e2418",   # iron-gall ink
+"text_secondary":   "#5a4a35",
+"text_muted":        "#8c7a5c",
+
+"accent_primary":   "#8a3a2a",   # oxblood wax-seal red — replaces the teal
+"accent_hover":     "#6e2d20",
+"accent_secondary": "#4d5c3f",   # moss/forest green — replaces the sage
+
+# Dialogue
+"bubble_npc_bg":    "#342F2B",
+"bubble_npc_text":  "#D2C5B1",
+
+"bubble_hero_bg":   "#47332C",
+"bubble_hero_text": "#E2D2BF",
+
     # Syntax highlighting (code preview only)
-    "syn_keyword": "#8a7a68",
-    "syn_type": "#7a7a9a",
-    "syn_function": "#5f8a72",
-    "syn_string": "#a68a5a",
-    "syn_comment": "#b0a894",
-    "syn_number": "#6a86a0",
-    # ── Typography ────────────────────────────────────────────────────────────
-    "font_display": "Cinzel, Trajan Pro, Georgia, serif",  # new key
-    "font_ui": "Segoe UI, Helvetica Neue, Arial, sans-serif",  # unchanged — body stays legible
-    "font_code": "Cascadia Code, Consolas, monospace",
-    "font_size_ui": "16px",
-    "font_size_small": "12px",
-    "font_size_tiny": "11px",
-    "font_size_title": "14px",
+    "syn_keyword":      "#8a7a68",
+    "syn_type":         "#7a7a9a",
+    "syn_function":     "#5f8a72",
+    "syn_string":       "#a68a5a",
+    "syn_comment":      "#b0a894",
+    "syn_number":       "#6a86a0",
+
+ # ── Typography ────────────────────────────────────────────────────────────
+    "font_display":     "Cinzel, Trajan Pro, Georgia, serif",   # new key
+    "font_ui":          "Segoe UI, Helvetica Neue, Arial, sans-serif",   # unchanged — body stays legible
+    "font_code":        "Cascadia Code, Consolas, monospace",
+    "font_size_ui":     "16px",
+    "font_size_small":  "12px",
+    "font_size_tiny":   "11px",
+    "font_size_title":  "14px",
     "font_size_placeholder": "15px",
-    "font_size_code": 10,  # pt, used for QFont object
+    "font_size_code":   10,          # pt, used for QFont object
+
     # ── Geometry ──────────────────────────────────────────────────────────────
-    "radius_sm": "1px",
-    "radius_md": "3px",
-    "radius_lg": "5px",
-    "border_width": "1px",
-    "topbar_height": 52,
-    "sidebar_width": 196,
-    "splitter_sizes": [196, 560, 460],
-    "window_size": (1280, 840),
+    "radius_sm":        "1px",
+    "radius_md":        "3px",
+    "radius_lg":        "5px",
+    "border_width":     "1px",
+    "topbar_height":    52,
+    "sidebar_width":    196,
+    "splitter_sizes":   [196, 560, 460],
+    "window_size":      (1280, 840),
+
     # ── Spacing ───────────────────────────────────────────────────────────────
-    "label_col_width": "44px",
+    "label_col_width":  "44px",
 }
 
 
 # ── Derived stylesheet fragments (built once from THEME, used everywhere) ─────
-
 
 def _ss_field():
     t = THEME
@@ -71,8 +77,8 @@ def _ss_field():
         f"  font-family:{t['font_ui']}; }}"
         f"QLineEdit:focus {{ border:{t['border_width']} solid {t['accent_primary']}; }}"
         f"QLineEdit::placeholder {{ color:{t['text_muted']}; }}"
+        
     )
-
 
 def _ss_field_readonly():
     t = THEME
@@ -83,7 +89,6 @@ def _ss_field_readonly():
         f"  font-family:{t['font_ui']}; font-style:italic; }}"
     )
 
-
 def _ss_spin():
     t = THEME
     return (
@@ -92,7 +97,6 @@ def _ss_spin():
         f"  border-radius:{t['radius_sm']}; padding:2px 4px; }}"
         f"QSpinBox:focus {{ border:{t['border_width']} solid {t['accent_primary']}; }}"
     )
-
 
 def _ss_combo():
     t = THEME
@@ -106,7 +110,6 @@ def _ss_combo():
         f"  selection-color:{t['bg_main']}; }}"
     )
 
-
 def _ss_check():
     t = THEME
     return (
@@ -118,7 +121,6 @@ def _ss_check():
         f"  border-color:{t['accent_primary']}; }}"
     )
 
-
 def _ss_group():
     t = THEME
     return (
@@ -129,8 +131,8 @@ def _ss_group():
         f"QGroupBox::title {{ subcontrol-origin:margin; left:10px; "
         f"  background:{t['bg_panel']}; padding:0 4px; }}"
         f"border: 2px double {THEME['bg_border']};"
+        
     )
-
 
 def _ss_add_btn():
     t = THEME
@@ -142,14 +144,12 @@ def _ss_add_btn():
         f"QPushButton:hover {{ background:{t['bg_input_border']}; color:{t['text_primary']}; }}"
     )
 
-
 def _ss_rm_btn():
     t = THEME
     return (
         f"QPushButton {{ background:transparent; color:{t['text_muted']}; border:none; }}"
         f"QPushButton:hover {{ color:{t['accent_hover']}; }}"
     )
-
 
 def _ss_global():
     t = THEME
@@ -191,18 +191,17 @@ def _ss_global():
         QMessageBox {{ background: {t['bg_main']}; }}
     """
 
-
 # Build all sheets once at import time
 SS = {
-    "field": _ss_field(),
+    "field":          _ss_field(),
     "field_readonly": _ss_field_readonly(),
-    "spin": _ss_spin(),
-    "combo": _ss_combo(),
-    "check": _ss_check(),
-    "group": _ss_group(),
-    "add_btn": _ss_add_btn(),
-    "rm_btn": _ss_rm_btn(),
-    "global": _ss_global(),
+    "spin":           _ss_spin(),
+    "combo":          _ss_combo(),
+    "check":          _ss_check(),
+    "group":          _ss_group(),
+    "add_btn":        _ss_add_btn(),
+    "rm_btn":         _ss_rm_btn(),
+    "global":         _ss_global(),
 }
 
 
@@ -216,66 +215,31 @@ class DaedalusHighlighter(QSyntaxHighlighter):
         def fmt(color, bold=False, italic=False):
             f = QTextCharFormat()
             f.setForeground(QColor(color))
-            if bold:
-                f.setFontWeight(QFont.Weight.Bold)
-            if italic:
-                f.setFontItalic(True)
+            if bold:   f.setFontWeight(QFont.Weight.Bold)
+            if italic: f.setFontItalic(True)
             return f
 
         kw = fmt(t["syn_keyword"], bold=True)
-        for w in [
-            "instance",
-            "func",
-            "void",
-            "int",
-            "var",
-            "return",
-            "if",
-            "else",
-            "INSTANCE",
-            "FUNC",
-            "VOID",
-            "INT",
-            "VAR",
-        ]:
-            self.rules.append((re.compile(r"\b" + w + r"\b"), kw))
+        for w in ["instance", "func", "void", "int", "var", "return", "if", "else",
+                  "INSTANCE", "FUNC", "VOID", "INT", "VAR"]:
+            self.rules.append((re.compile(r'\b' + w + r'\b'), kw))
 
         tp = fmt(t["syn_type"], bold=True)
-        for w in [
-            "C_INFO",
-            "TRUE",
-            "FALSE",
-            "LOG_MISSION",
-            "LOG_NOTE",
-            "LOG_RUNNING",
-            "LOG_SUCCESS",
-            "DIALOG_ENDE",
-        ]:
-            self.rules.append((re.compile(r"\b" + w + r"\b"), tp))
+        for w in ["C_INFO", "TRUE", "FALSE", "LOG_MISSION", "LOG_NOTE",
+                  "LOG_RUNNING", "LOG_SUCCESS", "DIALOG_ENDE"]:
+            self.rules.append((re.compile(r'\b' + w + r'\b'), tp))
 
         fn = fmt(t["syn_function"])
-        for w in [
-            "AI_Output",
-            "AI_StopProcessInfos",
-            "B_GiveXP",
-            "B_GiveInvItems",
-            "CreateInvItems",
-            "CreateInvItem",
-            "Npc_RemoveInvItems",
-            "Log_CreateTopic",
-            "Log_SetTopicStatus",
-            "B_LogEntry",
-            "Info_ClearChoices",
-            "Info_AddChoice",
-            "Npc_KnowsInfo",
-            "Npc_GetTrueGuild",
-            "Npc_IsInState",
-        ]:
-            self.rules.append((re.compile(r"\b" + w + r"\b"), fn))
+        for w in ["AI_Output", "AI_StopProcessInfos", "B_GiveXP", "B_GiveInvItems",
+                  "CreateInvItems", "CreateInvItem", "Npc_RemoveInvItems",
+                  "Log_CreateTopic", "Log_SetTopicStatus", "B_LogEntry",
+                  "Info_ClearChoices", "Info_AddChoice", "Npc_KnowsInfo",
+                  "Npc_GetTrueGuild", "Npc_IsInState"]:
+            self.rules.append((re.compile(r'\b' + w + r'\b'), fn))
 
-        self.rules.append((re.compile(r'"[^"]*"'), fmt(t["syn_string"])))
-        self.rules.append((re.compile(r"//[^\n]*"), fmt(t["syn_comment"], italic=True)))
-        self.rules.append((re.compile(r"\b\d+\b"), fmt(t["syn_number"])))
+        self.rules.append((re.compile(r'"[^"]*"'),  fmt(t["syn_string"])))
+        self.rules.append((re.compile(r'//[^\n]*'),  fmt(t["syn_comment"], italic=True)))
+        self.rules.append((re.compile(r'\b\d+\b'),   fmt(t["syn_number"])))
 
     def highlightBlock(self, text):
         for pat, fmt in self.rules:
