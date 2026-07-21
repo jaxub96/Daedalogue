@@ -19,5 +19,3 @@ env/
 .vscode/
 .idea/
 
-# Generated project output
-OUTPUT/

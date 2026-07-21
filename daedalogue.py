@@ -20,6 +20,17 @@ from daedalus_gen import (
     DialogBlock, sanitize, export_block_name,
     generate_dia_file, generate_constants_file, export_plain_dialog, parse_dia_file,export_followup_name
 )
+
+
+def _read_text_with_fallbacks(raw_bytes: bytes) -> str:
+    for encoding in ("utf-8", "cp1250", "cp1252", "latin-1"):
+        try:
+            text = raw_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if "�" not in text and "\ufffd" not in text:
+            return text
+    return raw_bytes.decode("utf-8", errors="replace")
 from widgets import BlockEditor, BlockListItem
 
 
@@ -194,6 +205,14 @@ class MainWindow(QMainWindow):
             cur = cur.parent_block
         return False
 
+    def _depth_for_block(self, block):
+        depth = 0
+        cur = block.parent_block
+        while cur is not None:
+            depth += 1
+            cur = cur.parent_block
+        return max(depth - 1, 0)
+
     def _add_block(self, block=None, parent_idx=None):
         b = block if block is not None else DialogBlock()
         insert_pos = self._find_insert_pos_after(parent_idx) if parent_idx is not None else len(self.blocks)
@@ -205,8 +224,9 @@ class MainWindow(QMainWindow):
         self.block_editors.insert(insert_pos, ed)
         self.editor_stack.addWidget(ed)
 
+        depth = self._depth_for_block(b)
         item = BlockListItem(insert_pos, b.name, on_select=self._select_block,
-                              on_remove=self._remove_block, is_followup=b.is_followup)
+                              on_remove=self._remove_block, is_followup=b.is_followup, depth=depth)
         self.block_items.insert(insert_pos, item)
         self.block_list_layout.insertWidget(insert_pos, item)
         self._reindex()
@@ -312,7 +332,10 @@ class MainWindow(QMainWindow):
             if b.is_followup:
                 parent_bn = b.parent_block.func_name if b.parent_block.is_followup \
                     else export_block_name(ni, b.parent_block.name)
-                b.func_name = export_followup_name(parent_bn, b.name)
+                # Preserve existing function names when opening/parsing files.
+                # Only generate a new follow-up name if none is set (empty string).
+                if not getattr(b, "func_name", ""):
+                    b.func_name = export_followup_name(parent_bn, b.name)
         for ed in self.block_editors:
             for cw in ed.get_choice_widgets():
                 if cw.linked_block is not None:
@@ -358,8 +381,8 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, "Open Dialog File", "", "Daedalus Dialog Files (*.d)")
         if not path: return
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
+            raw = open(path, "rb").read()
+            text = _read_text_with_fallbacks(raw)
             npc_name, npc_id, blocks = parse_dia_file(text)
         except Exception as e:
             QMessageBox.critical(self, "Could Not Open File", f"This file could not be read:\n{e}")

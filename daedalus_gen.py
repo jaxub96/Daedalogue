@@ -240,18 +240,18 @@ def export_plain_dialog(blocks):
 
 
 # ── Parser (round-trips files produced by this tool) ───────────────────────────
-_LINE_RE     = re.compile(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)')
-_CHOICE_RE   = re.compile(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);')
-_ROUTINE_RE  = re.compile(r'Npc_ExchangeRoutine\s*\(self,\s*"([^"]*)"\);')
+_LINE_RE     = re.compile(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)', re.I)
+_CHOICE_RE   = re.compile(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);', re.I)
+_ROUTINE_RE  = re.compile(r'Npc_ExchangeRoutine\s*\(self,\s*"([^"]*)"\);', re.I)
 _GIVE_RE     = re.compile(
     r'(?:CreateInvItems?\(self,\s*([^,)]+)(?:,\s*(\d+))?\);\s*)?'
-    r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);')
-_TAKE_RE     = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);')
-_XP_RE       = re.compile(r'B_GiveXP\(([^)]*)\);')
+    r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);', re.I)
+_TAKE_RE     = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);', re.I)
+_XP_RE       = re.compile(r'B_GiveXP\(([^)]*)\);', re.I)
 _LOG_RE      = re.compile(
     r'Log_CreateTopic\s*\(([^,]+),\s*\w+\);\s*'
     r'Log_SetTopicStatus\s*\(([^,]+),\s*(\w+)\);'
-    r'(?:\s*B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);)?')
+    r'(?:\s*B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);)?', re.I)
 
 
 def _parse_body(seg, bn):
@@ -299,7 +299,11 @@ def _apply_body(b, body):
 def _parse_followups(parent_block, choices, full_text, blocks_out):
     for ch in choices:
         name = ch.func_name
-        m = re.search(rf'func void {re.escape(name)}\s*\(\)\s*\{{(.*?)\n\}};', full_text, re.S)
+        m = re.search(rf'func void {re.escape(name)}\s*\(\)\s*\{{(.*?)\n\}};', full_text, re.S | re.I)
+        if not m:
+            # Some Gothic files use a different layout or naming convention. Fall back to a
+            # more permissive search for a function body by name.
+            m = re.search(rf'func\s+void\s+{re.escape(name)}\s*\(\)\s*\{{(.*?)\n\}};', full_text, re.S | re.I)
         if not m: continue
         fb = DialogBlock()
         fb.is_followup = True
@@ -347,15 +351,39 @@ def parse_dia_file(text):
         b.description = field(r'description\s*=\s*"([^"]*)"\s*;', "")
         b.is_trade = bool(re.search(r'Trade\s*=\s*1\s*;', inst_body))
 
-        cond_m = re.search(rf'FUNC int {re.escape(bn)}_Condition\(\)\s*\{{(.*?)\}};\s*FUNC VOID', seg, re.S)
-        cond_body = cond_m.group(1).strip() if cond_m else ""
+        if not npc_id:
+            npc_match = re.search(r'\bnpc\s*=\s*([A-Za-z0-9_\.]+);', inst_body)
+            if npc_match:
+                npc_id = npc_match.group(1).strip()
+
+        cond_patterns = [
+            rf'FUNC int {re.escape(bn)}_Condition\(\)\s*\{{(.*?)\}};\s*FUNC VOID',
+            rf'func int {re.escape(bn)}_condition\(\)\s*\{{(.*?)\}};\s*func void',
+            rf'FUNC int {re.escape(bn)}_Condition\(\)\s*\{{(.*?)\}};',
+            rf'func int {re.escape(bn)}_condition\(\)\s*\{{(.*?)\}};',
+        ]
+        cond_body = ""
+        for pat in cond_patterns:
+            cond_m = re.search(pat, seg, re.S | re.I)
+            if cond_m:
+                cond_body = cond_m.group(1).strip()
+                break
         if cond_body and cond_body != "return 1;":
             b.condition_expr = cond_body
 
-        info_m = re.search(rf'FUNC VOID {re.escape(bn)}_Info\(\)\s*\{{(.*)', seg, re.S)
-        info_body = info_m.group(1) if info_m else ""
-        cut = info_body.find("\n};")
-        if cut != -1: info_body = info_body[:cut]
+        info_patterns = [
+            rf'FUNC VOID {re.escape(bn)}_Info\(\)\s*\{{(.*)',
+            rf'func void {re.escape(bn)}_info\(\)\s*\{{(.*)',
+        ]
+        info_body = ""
+        for pat in info_patterns:
+            info_m = re.search(pat, seg, re.S | re.I)
+            if info_m:
+                info_body = info_m.group(1)
+                break
+        if info_body:
+            cut = info_body.find("\n};")
+            if cut != -1: info_body = info_body[:cut]
 
         body = _parse_body(info_body, bn)
         _apply_body(b, body)

@@ -730,7 +730,7 @@ class BlockEditor(QWidget):
 
 class BlockListItem(QFrame):
     def __init__(
-        self, idx, name, parent=None, on_select=None, on_remove=None, is_followup=False
+        self, idx, name, parent=None, on_select=None, on_remove=None, is_followup=False, depth=0
     ):
         super().__init__(parent)
         self.idx = idx
@@ -738,12 +738,13 @@ class BlockListItem(QFrame):
         self.on_remove = on_remove
         self._active = False
         self.is_followup = is_followup
+        self.depth = depth
         self.setFixedHeight(34)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(24 if is_followup else 10, 4, 6, 4)
-        prefix = "↳ " if is_followup else ""
-        self.lbl = QLabel(prefix + (name or f"Scene {idx+1}"))
+        left_margin = 18 + (self.depth * 16) if self.is_followup else 10 + (self.depth * 10)
+        lay.setContentsMargins(left_margin, 4, 6, 4)
+        self.lbl = QLabel(self._label_text(name or f"Scene {idx+1}"))
         rm = QPushButton("✕")
         rm.setFixedSize(18, 18)
         rm.setStyleSheet(SS["rm_btn"])
@@ -755,16 +756,16 @@ class BlockListItem(QFrame):
     def _update_style(self):
         if self._active:
             self.setStyleSheet(
-                f"QFrame {{ background:{THEME['bg_bar']}; border-left:3px solid {THEME['accent_primary']}; "
-                f"border-radius:{THEME['radius_sm']}; margin:1px; }}"
+                f"QFrame {{ background:{THEME['bg_bar']}; border:none; "
+                f"border-radius:0; margin:0px; }}"
             )
             self.lbl.setStyleSheet(
                 f"color:{THEME['accent_hover']}; font-weight:700; font-size:{THEME['font_size_ui']};"
             )
         else:
             self.setStyleSheet(
-                f"QFrame {{ background:{THEME['bg_panel']}; border-left:3px solid transparent; "
-                f"border-radius:{THEME['radius_sm']}; margin:1px; }}"
+                f"QFrame {{ background:{THEME['bg_panel']}; border:none; "
+                f"border-radius:0; margin:0px; }}"
             )
             color = THEME["text_muted"] if self.is_followup else THEME["text_secondary"]
             self.lbl.setStyleSheet(f"color:{color}; font-size:{THEME['font_size_ui']};")
@@ -773,9 +774,13 @@ class BlockListItem(QFrame):
         self._active = v
         self._update_style()
 
+    def _label_text(self, text):
+        if not self.is_followup:
+            return text
+        return ("↳ " * (self.depth + 1)) + text
+
     def update_name(self, n):
-        prefix = "↳ " if self.is_followup else ""
-        self.lbl.setText(prefix + (n or f"Scene {self.idx+1}"))
+        self.lbl.setText(self._label_text(n or f"Scene {self.idx+1}"))
 
     def mousePressEvent(self, e):
         if self.on_select:
