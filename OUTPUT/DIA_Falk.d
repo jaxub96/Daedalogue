@@ -34,19 +34,19 @@ FUNC int DIA_Falk_INVENTORY_Condition()
 
 FUNC VOID DIA_Falk_INVENTORY_Info()
 	Info_ClearChoices	(DIA_Falk_INVENTORY);
-	AI_Output (other, self,"DIA_Falk_INVENTORY_15_00"); //Mam tu odebrać swoje rzeczy.
-	AI_Output (self, other,"DIA_Falk_INVENTORY_10_01"); //Czyżby? Jak się nazywasz?
-	AI_Output (other, self,"DIA_Falk_INVENTORY_15_02"); //*Gracz podaje swoje imię*
-	AI_Output (self, other,"DIA_Falk_INVENTORY_10_03"); //Sprawdźmy...
-	AI_Output (self, other,"DIA_Falk_INVENTORY_10_04"); //Tak, jesteś zwolniony z aresztu.
+	AI_Output (other, self,"DIA_Falk_INVENTORY_15_00"); //Mam tu odebraÄ‡ swoje rzeczy.
+	AI_Output (self, other,"DIA_Falk_INVENTORY_10_01"); //CzyĹĽby? Jak siÄ™ nazywasz?
+	AI_Output (other, self,"DIA_Falk_INVENTORY_15_02"); //*Gracz podaje swoje imiÄ™*
+	AI_Output (self, other,"DIA_Falk_INVENTORY_10_03"); //SprawdĹşmy...
+	AI_Output (self, other,"DIA_Falk_INVENTORY_10_04"); //Tak, jesteĹ› zwolniony z aresztu.
 	AI_Output (self, other,"DIA_Falk_INVENTORY_10_05"); //A oto twoje rzeczy.
-	AI_Output (self, other,"DIA_Falk_INVENTORY_10_06"); //Czy wszystko się zgadza?
+	AI_Output (self, other,"DIA_Falk_INVENTORY_10_06"); //Czy wszystko siÄ™ zgadza?
 	Info_AddChoice	(DIA_Falk_INVENTORY,"Tak",DIA_Falk_INVENTORY_MINE_Info);
 	Info_AddChoice	(DIA_Falk_INVENTORY,"To chyba nie moje...",DIA_Falk_INVENTORY_NOTMINE_Info);
 	B_GiveInvItems(self, other, IT_START, 1);
 	Log_CreateTopic	(Zwolnienie, LOG_NOTE);
 	Log_SetTopicStatus	(Zwolnienie, LOG_NOTE);
-	B_LogEntry	(Zwolnienie,"Oddano mi kilka przedmiotów. Ale nie należą do mnie.");
+	B_LogEntry	(Zwolnienie,"Oddano mi kilka przedmiotĂłw. Ale nie naleĹĽÄ… do mnie.");
 
 // ============================================================
 // 			INVENTORY_MINE
@@ -63,8 +63,8 @@ FUNC int DIA_Falk_INVENTORY_MINE_Condition()
 	return 1;
 
 FUNC VOID DIA_Falk_INVENTORY_MINE_Info()
-	AI_Output (other, self,"DIA_Falk_INVENTORY_MINE_15_00"); //Tak, zgadza się.
-	AI_Output (self, other,"DIA_Falk_INVENTORY_MINE_10_01"); //Dobrze, w takim razie możesz iść.
+	AI_Output (other, self,"DIA_Falk_INVENTORY_MINE_15_00"); //Tak, zgadza siÄ™.
+	AI_Output (self, other,"DIA_Falk_INVENTORY_MINE_10_01"); //Dobrze, w takim razie moĹĽesz iĹ›Ä‡.
 	AI_StopProcessInfos	(self);
 
 // ============================================================
@@ -82,7 +82,7 @@ FUNC int DIA_Falk_INVENTORY_NOTMINE_Condition()
 	return 1;
 
 FUNC VOID DIA_Falk_INVENTORY_NOTMINE_Info()
-	AI_Output (other, self,"DIA_Falk_INVENTORY_NOTMINE_15_00"); //To chyba pomyłka. Te rzeczy nie są moje?
-	AI_Output (self, other,"DIA_Falk_INVENTORY_NOTMINE_10_01"); //Nie? Były zapisane pod twoim imieniem.
-	AI_Output (self, other,"DIA_Falk_INVENTORY_NOTMINE_10_02"); //To już nie mój problem. Zrób z nimi co chcesz.
+	AI_Output (other, self,"DIA_Falk_INVENTORY_NOTMINE_15_00"); //To chyba pomyĹ‚ka. Te rzeczy nie sÄ… moje?
+	AI_Output (self, other,"DIA_Falk_INVENTORY_NOTMINE_10_01"); //Nie? ByĹ‚y zapisane pod twoim imieniem.
+	AI_Output (self, other,"DIA_Falk_INVENTORY_NOTMINE_10_02"); //To juĹĽ nie mĂłj problem. ZrĂłb z nimi co chcesz.
 	AI_StopProcessInfos	(self);

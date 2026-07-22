@@ -90,6 +90,15 @@ class MainWindow(QMainWindow):
         text_btn = flat_btn("Export Text")
         text_btn.clicked.connect(self._export_text)
 
+        reset_btn = flat_btn("Reset")
+        reset_btn.setStyleSheet(
+            f"QPushButton {{ background:{THEME['bg_panel']}; color:{THEME['accent_hover']}; "
+            f"border:{THEME['border_width']} solid {THEME['bg_border']}; "
+            f"border-radius:{THEME['radius_md']}; padding:6px 14px; font-weight:600; }}"
+            f"QPushButton:hover {{ background:{THEME['accent_primary']}; color:{THEME['bg_main']}; }}")
+        reset_btn.setToolTip("Clear the NPC name/ID and every scene")
+        reset_btn.clicked.connect(self._reset)
+
         save_btn = QPushButton("Save")
         save_btn.setStyleSheet(
             f"QPushButton {{ background:{THEME['accent_primary']}; color:{THEME['bg_main']}; "
@@ -102,13 +111,15 @@ class MainWindow(QMainWindow):
         tb.addWidget(title); tb.addWidget(sep); tb.addStretch()
         tb.addWidget(hdr_lbl("NPC Name")); tb.addWidget(self.npc_name_edit)
         tb.addWidget(hdr_lbl("NPC ID"));   tb.addWidget(self.npc_id_edit)
-        tb.addWidget(open_btn); tb.addWidget(text_btn); tb.addWidget(save_btn)
+        tb.addWidget(open_btn); tb.addWidget(text_btn); tb.addWidget(reset_btn); tb.addWidget(save_btn)
         root.addWidget(topbar)
 
         splitter = QSplitter(Qt.Orientation.Horizontal); splitter.setHandleWidth(2)
 
-        # Sidebar
-        left = QWidget(); left.setFixedWidth(THEME["sidebar_width"])
+        # Sidebar — resizable, but kept within sane bounds via the splitter
+        left = QWidget()
+        left.setMinimumWidth(140)
+        left.setMaximumWidth(420)
         left.setStyleSheet(f"QWidget {{ background:{THEME['bg_panel']}; }}")
         lv = QVBoxLayout(left); lv.setContentsMargins(6, 10, 6, 8); lv.setSpacing(4)
 
@@ -176,6 +187,10 @@ class MainWindow(QMainWindow):
 
         splitter.addWidget(preview_panel)
         splitter.setSizes(THEME["splitter_sizes"])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(2, 1)
+        splitter.setChildrenCollapsible(False)
         root.addWidget(splitter, 1)
 
         self.npc_name_edit.textChanged.connect(self._refresh_preview)
@@ -390,6 +405,24 @@ class MainWindow(QMainWindow):
         self._load_project(npc_name, npc_id, blocks)
         self.current_file_path = path
         self.setWindowTitle(f"Gothic Dialog Generator — {os.path.basename(path)}")
+
+    def _reset(self):
+        has_content = bool(
+            self.blocks or self.npc_name_edit.text().strip() or self.npc_id_edit.text().strip()
+        )
+        if has_content:
+            resp = QMessageBox.question(
+                self,
+                "Reset Everything",
+                "This clears the NPC name/ID and every scene. This cannot be undone.\n\nContinue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if resp != QMessageBox.StandardButton.Yes:
+                return
+        self._load_project("", "", [])
+        self.current_file_path = None
+        self.setWindowTitle("Gothic Dialog Generator")
 
     def _load_project(self, npc_name, npc_id, blocks):
         for ed in self.block_editors:

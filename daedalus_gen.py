@@ -28,11 +28,12 @@ class EffectEntry:
     """A give-item / take-item / give-xp / log-entry effect, placed inline
     among a scene's DialogLines at whatever point it should fire."""
     def __init__(self, kind, **fields):
-        self.kind = kind          # "give_item" | "take_item" | "give_xp" | "log" | "lead" | "follow"
+        self.kind = kind          # "give_item" | "take_item" | "give_xp" | "log" | "routine" | "follow" | "unfollow"
         self.item = fields.get("item", "")
         self.count = fields.get("count", 1)
         self.xp = fields.get("xp", "")
-        self.routine = fields.get("routine", "PLACEHOLDER_LEAD_ROUTINE")
+        default_routine = "START" if kind == "unfollow" else "PLACEHOLDER_ROUTINE"
+        self.routine = fields.get("routine", default_routine)
         self.log_topic = fields.get("log_topic", "")
         self.log_status = fields.get("log_status", "LOG_RUNNING")
         self.log_entry = fields.get("log_entry", "")
@@ -49,10 +50,12 @@ class EffectEntry:
             parts = [self.log_topic or "Log"]
             if self.log_status: parts.append(self.log_status)
             return " · ".join(parts)
-        if self.kind == "lead":
-            return f"NPC leads Hero ({self.routine})"
+        if self.kind == "routine":
+            return f"NPC changes routine ({self.routine})"
         if self.kind == "follow":
-            return f"NPC follows Hero"
+            return f"NPC joins party"
+        if self.kind == "unfollow":
+            return f"NPC leaves party → {self.routine}"
         return self.kind
 
 
@@ -120,19 +123,23 @@ def _entry_lines(entries, bn):
         elif e.kind == "give_xp":
             if not e.xp: continue
             out.append(f"\tB_GiveXP({e.xp});")
-        elif e.kind == "lead":
+        elif e.kind == "routine":
+            # NPC changes its routine.
             out.append("\tAI_StopProcessInfos(self);")
-            out.append("\tself.aivar[AIV_PARTYMEMBER] = TRUE;")
-            out.append(f'\tNpc_ExchangeRoutine(self,"{e.routine or "PLACEHOLDER_LEAD_ROUTINE"}");')
+            out.append(f'\tNpc_ExchangeRoutine(self,"{e.routine or "PLACEHOLDER_ROUTINE"}");')
+            # out.append("\tself.aivar[AIV_PARTYMEMBER] = TRUE;")
         elif e.kind == "follow":
-            out.append("\tif(C_BodyStateContains(self,BS_SIT))")
-            out.append("\t{")
-            out.append("\t\tAI_Standup(self);")
-            out.append("\t\tB_TurnToNpc(self,other);")
-            out.append("\t};")
+            # Matches DIA_Addon_Thiefow_ComeOn_Info exactly: stop, switch to the
+            # FOLLOW pseudo-routine, then flag as party member.
             out.append("\tAI_StopProcessInfos(self);")
             out.append('\tNpc_ExchangeRoutine(self,"FOLLOW");')
             out.append("\tself.aivar[AIV_PARTYMEMBER] = TRUE;")
+        elif e.kind == "unfollow":
+            # Matches DIA_Addon_Thiefow_GoHome_Info: stop, un-flag as party
+            # member, then hand the NPC back to a normal standing routine.
+            out.append("\tAI_StopProcessInfos(self);")
+            out.append("\tself.aivar[AIV_PARTYMEMBER] = FALSE;")
+            out.append(f'\tNpc_ExchangeRoutine(self,"{e.routine or "START"}");')
         elif e.kind == "log":
             if not e.log_topic: continue
             out.append(f"\tLog_CreateTopic\t({e.log_topic}, {_log_type(e.log_status)});")
@@ -248,6 +255,7 @@ _GIVE_RE     = re.compile(
     r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);', re.I)
 _TAKE_RE     = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);', re.I)
 _XP_RE       = re.compile(r'B_GiveXP\(([^)]*)\);', re.I)
+_AIVAR_RE    = re.compile(r'self\.aivar\[AIV_PARTYMEMBER\]\s*=\s*(TRUE|FALSE)', re.I)
 _LOG_RE      = re.compile(
     r'Log_CreateTopic\s*\(([^,]+),\s*\w+\);\s*'
     r'Log_SetTopicStatus\s*\(([^,]+),\s*(\w+)\);'
@@ -274,7 +282,16 @@ def _parse_body(seg, bn):
         if routine == "FOLLOW":
             found.append((m.start(), EffectEntry("follow")))
         else:
-            found.append((m.start(), EffectEntry("lead", routine=routine)))
+            # A plain routine switch is ambiguous on its own — look at whichever
+            # AIV_PARTYMEMBER assignment sits nearest to it. TRUE means the NPC
+            # is being sent off to lead/guide; FALSE means it's stopping (the
+            # DIA_Addon_Thiefow_GoHome "wait here" pattern).
+            window = seg[max(0, m.start() - 150):m.end() + 150]
+            av = _AIVAR_RE.search(window)
+            if av and av.group(1).upper() == "FALSE":
+                found.append((m.start(), EffectEntry("unfollow", routine=routine)))
+            else:
+                found.append((m.start(), EffectEntry("routine", routine=routine)))
     for m in _LOG_RE.finditer(seg):
         found.append((m.start(), EffectEntry(
             "log", log_topic=m.group(1).strip(), log_status=m.group(3).strip(),

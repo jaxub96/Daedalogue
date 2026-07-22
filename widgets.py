@@ -16,8 +16,11 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QTabWidget,
+    QSplitter,
+    QApplication,
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QMimeData
+from PyQt6.QtGui import QDrag
 
 from theme import THEME, SS
 from daedalus_gen import (
@@ -62,11 +65,119 @@ class ChatInput(QLineEdit):
         super().keyPressEvent(e)
 
 
-class ChatBubble(QFrame):
-    """Shows one dialog line. Double-click the text to edit it in place."""
+# ── Drag-and-drop reordering for chat bubbles ───────────────────────────────
+class _BubbleDragState:
+    """In-process bookkeeping for a drag. QDrag.exec() blocks the event loop
+    until the drop lands, so a single class-level slot is all that's needed
+    to remember which bubble is being dragged."""
+    source = None
+    MIME = "application/x-daedalogue-bubble"
+
+
+class DragHandle(QLabel):
+    """Small grip on each bubble — press and drag it to reorder the line."""
+
+    def __init__(self, drag_target):
+        super().__init__("⋮⋮")
+        self._target = drag_target
+        self._press_pos = None
+        self.setFixedWidth(14)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.setToolTip("Drag to reorder")
+        self.setStyleSheet(f"color:{THEME['text_muted']}; background:transparent; font-size:11px;")
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton:
+            self._press_pos = e.pos()
+        super().mousePressEvent(e)
+
+    def mouseMoveEvent(self, e):
+        if self._press_pos is not None and (e.buttons() & Qt.MouseButton.LeftButton):
+            if (e.pos() - self._press_pos).manhattanLength() >= QApplication.startDragDistance():
+                self._start_drag()
+                return
+        super().mouseMoveEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        self._press_pos = None
+        super().mouseReleaseEvent(e)
+
+    def _start_drag(self):
+        _BubbleDragState.source = self._target
+        drag = QDrag(self)
+        mime = QMimeData()
+        mime.setData(_BubbleDragState.MIME, b"1")
+        drag.setMimeData(mime)
+        drag.setPixmap(self._target.grab())
+        drag.exec(Qt.DropAction.MoveAction)
+        _BubbleDragState.source = None
+        self._press_pos = None
+
+
+class _DropTargetMixin:
+    """Lets a bubble accept another bubble dropped onto it, reordering the
+    conversation. Which half of the widget the drop lands on decides whether
+    the dragged bubble ends up before or after this one."""
+
+    def _init_drop_target(self):
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasFormat(_BubbleDragState.MIME) and _BubbleDragState.source not in (None, self):
+            e.acceptProposedAction()
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasFormat(_BubbleDragState.MIME):
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        src = _BubbleDragState.source
+        if src is None or src is self:
+            e.ignore()
+            return
+        drop_after = e.position().y() > self.height() / 2
+        container = self.parent()
+        if hasattr(container, "reorder_bubble"):
+            container.reorder_bubble(src, self, drop_after)
+        e.acceptProposedAction()
+
+
+class ChatDropContainer(QWidget):
+    """The scrollable column that holds all bubbles. Dropping onto empty
+    space below the last bubble moves the dragged one to the end."""
+
+    def __init__(self, owner):
+        super().__init__()
+        self._owner = owner
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasFormat(_BubbleDragState.MIME):
+            e.acceptProposedAction()
+
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasFormat(_BubbleDragState.MIME):
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        src = _BubbleDragState.source
+        if src is not None:
+            self._owner.reorder_bubble(src, None, True)
+        e.acceptProposedAction()
+
+    def reorder_bubble(self, src_bubble, target_bubble, drop_after):
+        self._owner.reorder_bubble(src_bubble, target_bubble, drop_after)
+
+
+class ChatBubble(QFrame, _DropTargetMixin):
+    """Shows one dialog line. Double-click the text to edit it in place.
+    Drag the ⋮⋮ handle to reorder it within the conversation."""
 
     def __init__(self, line: DialogLine, on_remove=None, on_edit=None):
         super().__init__()
+        self._init_drop_target()
         self.line = line
         self.on_remove = on_remove
         self.on_edit = on_edit
@@ -85,8 +196,11 @@ class ChatBubble(QFrame):
             f"QFrame {{ background:{bg}; border-radius:{THEME['radius_lg']}; }}"
         )
         bl = QHBoxLayout(bubble)
-        bl.setContentsMargins(10, 6, 6, 6)
-        bl.setSpacing(4)
+        bl.setContentsMargins(14, 10, 8, 10)
+        bl.setSpacing(8)
+
+        grip = DragHandle(self)
+        bl.addWidget(grip, 0, Qt.AlignmentFlag.AlignTop)
 
         tag = QLabel(speaker_display_name(line.speaker))
         tag.setStyleSheet(
@@ -97,9 +211,10 @@ class ChatBubble(QFrame):
         self.text_lbl = QLabel(line.text)
         self.text_lbl.setWordWrap(True)
         self.text_lbl.setStyleSheet(
-            f"color:{fg}; background:transparent; font-family:{THEME['font_ui']};"
+            f"color:{fg}; background:transparent; font-family:{THEME['font_ui']}; "
+            f"font-size:{THEME['font_size_ui']};"
         )
-        self.text_lbl.setMaximumWidth(340)
+        self.text_lbl.setMaximumWidth(440)
         self.text_lbl.setCursor(Qt.CursorShape.IBeamCursor)
         self.text_lbl.setToolTip("Double-click to edit")
         self.text_lbl.mouseDoubleClickEvent = lambda e: self._enter_edit()
@@ -108,21 +223,21 @@ class ChatBubble(QFrame):
         self.text_edit.setStyleSheet(
             f"QLineEdit {{ background:{THEME['bg_input']}; color:{THEME['text_primary']}; "
             f"border:{THEME['border_width']} solid {THEME['accent_primary']}; "
-            f"border-radius:{THEME['radius_sm']}; padding:2px 4px; }}"
+            f"border-radius:{THEME['radius_sm']}; padding:4px 6px; font-size:{THEME['font_size_ui']}; }}"
         )
-        self.text_edit.setMaximumWidth(340)
+        self.text_edit.setMaximumWidth(440)
         self.text_edit.hide()
         self.text_edit.editingFinished.connect(self._commit_edit)
 
         col = QVBoxLayout()
-        col.setSpacing(1)
+        col.setSpacing(3)
         col.addWidget(tag)
         col.addWidget(self.text_lbl)
         col.addWidget(self.text_edit)
         bl.addLayout(col, 1)
 
         rm = QPushButton("✕")
-        rm.setFixedSize(16, 16)
+        rm.setFixedSize(18, 18)
         rm.setStyleSheet(SS["rm_btn"])
         rm.clicked.connect(lambda: self.on_remove(self) if self.on_remove else None)
         bl.addWidget(rm, 0, Qt.AlignmentFlag.AlignTop)
@@ -149,21 +264,24 @@ class ChatBubble(QFrame):
             self.on_edit()
 
 
-class EffectBubble(QFrame):
+class EffectBubble(QFrame, _DropTargetMixin):
     """Shows one inline effect (give/take item, XP, log entry), centered
-    and visually distinct from spoken lines. Remove and re-insert to edit."""
+    and visually distinct from spoken lines. Remove and re-insert to edit.
+    Drag the ⋮⋮ handle to reorder it within the conversation."""
 
     ICONS = {
         "give_item": "🎁",
         "take_item": "📤",
         "give_xp": "⭐",
         "log": "📜",
-        "lead": "🧭",
+        "routine": "🧭",
         "follow": "🧭",
+        "unfollow": "🏠",
     }
 
     def __init__(self, entry: EffectEntry, on_remove=None):
         super().__init__()
+        self._init_drop_target()
         self.entry = entry
         self.on_remove = on_remove
 
@@ -179,8 +297,11 @@ class EffectBubble(QFrame):
             f"border-radius:{THEME['radius_lg']}; }}"
         )
         pl = QHBoxLayout(pill)
-        pl.setContentsMargins(10, 4, 6, 4)
-        pl.setSpacing(6)
+        pl.setContentsMargins(10, 6, 8, 6)
+        pl.setSpacing(8)
+
+        grip = DragHandle(self)
+        pl.addWidget(grip)
 
         icon = self.ICONS.get(entry.kind, "•")
         lbl = QLabel(f"{icon}  {entry.summary()}")
@@ -189,7 +310,7 @@ class EffectBubble(QFrame):
             f"font-size:{THEME['font_size_small']}; font-style:italic;"
         )
         rm = QPushButton("✕")
-        rm.setFixedSize(14, 14)
+        rm.setFixedSize(16, 16)
         rm.setStyleSheet(SS["rm_btn"])
         rm.clicked.connect(lambda: self.on_remove(self) if self.on_remove else None)
 
@@ -212,7 +333,7 @@ class EffectInsertRow(QWidget):
 
         self.kind_cmb = QComboBox()
         self.kind_cmb.addItems(
-            ["Give Item", "Take Item", "Give XP", "Lead", "Follow", "Log Entry"]
+            ["Give Item", "Take Item", "Give XP", "Change Routine", "Follow", "Stop Following", "Log Entry"]
         )
         self.kind_cmb.setFixedWidth(118)
         self.kind_cmb.setStyleSheet(SS["combo"])
@@ -231,9 +352,9 @@ class EffectInsertRow(QWidget):
         self.xp_edit.setPlaceholderText("XP constant  e.g. XP_KilledBandit")
         self.xp_edit.setStyleSheet(SS["field"])
 
-        self.lead_edit = QLineEdit()
-        self.lead_edit.setPlaceholderText("Lead routine  e.g. Rtn_Lead_MyNpc")
-        self.lead_edit.setStyleSheet(SS["field"])
+        self.routine_edit = QLineEdit()
+        self.routine_edit.setPlaceholderText("routine  e.g. Rtn_Lead_MyNpc")
+        self.routine_edit.setStyleSheet(SS["field"])
 
         self.topic_edit = QLineEdit()
         self.topic_edit.setPlaceholderText("Log topic  e.g. CH1_JoinPsi")
@@ -256,7 +377,7 @@ class EffectInsertRow(QWidget):
         lay.addWidget(self.item_edit, 1)
         lay.addWidget(self.count_spin)
         lay.addWidget(self.xp_edit, 1)
-        lay.addWidget(self.lead_edit, 1)
+        lay.addWidget(self.routine_edit, 1)
         lay.addWidget(self.topic_edit, 1)
         lay.addWidget(self.status_cmb)
         lay.addWidget(self.entry_edit, 1)
@@ -268,15 +389,19 @@ class EffectInsertRow(QWidget):
         kind = self.kind_cmb.currentIndex()
         show_item = kind in (0, 1)
         show_xp = kind == 2
-        show_lead = kind == 3
-        show_log = kind == 5
+        show_routine = kind in (3, 5)  # Change Routine and Stop Following both take a routine name
+        show_log = kind == 6
         self.item_edit.setVisible(show_item)
         self.count_spin.setVisible(show_item)
         self.xp_edit.setVisible(show_xp)
-        self.lead_edit.setVisible(show_lead)
+        self.routine_edit.setVisible(show_routine)
         self.topic_edit.setVisible(show_log)
         self.status_cmb.setVisible(show_log)
         self.entry_edit.setVisible(show_log)
+        if kind == 5:
+            self.routine_edit.setPlaceholderText("Routine to resume  e.g. START")
+        else:
+            self.routine_edit.setPlaceholderText("Change routine  e.g. Rtn_Change_MyNpc")
 
     def _insert(self):
         kind = self.kind_cmb.currentIndex()
@@ -301,10 +426,13 @@ class EffectInsertRow(QWidget):
                 return
             e = EffectEntry("give_xp", xp=self.xp_edit.text().strip())
         elif kind == 3:
-            routine = self.lead_edit.text().strip() or "PLACEHOLDER_LEAD_ROUTINE"
-            e = EffectEntry("lead", routine=routine)
+            routine = self.routine_edit.text().strip() or "PLACEHOLDER_ROUTINE"
+            e = EffectEntry("routine", routine=routine)
         elif kind == 4:
             e = EffectEntry("follow")
+        elif kind == 5:
+            routine = self.routine_edit.text().strip() or "START"
+            e = EffectEntry("unfollow", routine=routine)
         else:
             if not self.topic_edit.text().strip():
                 return
@@ -318,7 +446,7 @@ class EffectInsertRow(QWidget):
             self.on_insert(e)
         self.item_edit.clear()
         self.xp_edit.clear()
-        self.lead_edit.clear()
+        self.routine_edit.clear()
         self.topic_edit.clear()
         self.entry_edit.clear()
         self.count_spin.setValue(1)
@@ -341,7 +469,7 @@ class ChatLinesWidget(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        self.chat_container = QWidget()
+        self.chat_container = ChatDropContainer(self)
         self.chat_container.setStyleSheet(f"background:{THEME['bg_main']};")
         self.chat_layout = QVBoxLayout(self.chat_container)
         self.chat_layout.setContentsMargins(6, 6, 6, 6)
@@ -433,6 +561,34 @@ class ChatLinesWidget(QWidget):
         bubble.deleteLater()
         if self.on_change:
             self.on_change()
+
+    def reorder_bubble(self, src_bubble, target_bubble, drop_after):
+        """Move src_bubble to sit before/after target_bubble (or to the end
+        if target_bubble is None), then rebuild self.entries from whatever
+        order the bubbles now actually appear in on screen — simplest way
+        to guarantee the data model never drifts from what's visible."""
+        if src_bubble not in self._bubble_map:
+            return
+        self.chat_layout.removeWidget(src_bubble)
+        if target_bubble is None or target_bubble not in self._bubble_map:
+            insert_at = self.chat_layout.count() - 1  # keep trailing stretch last
+        else:
+            idx = self.chat_layout.indexOf(target_bubble)
+            insert_at = idx + 1 if drop_after else idx
+        insert_at = max(0, min(insert_at, self.chat_layout.count() - 1))
+        self.chat_layout.insertWidget(insert_at, src_bubble)
+        self._sync_entries_from_layout()
+        if self.on_change:
+            self.on_change()
+
+    def _sync_entries_from_layout(self):
+        ordered = []
+        for i in range(self.chat_layout.count() - 1):  # last slot is the trailing stretch
+            item = self.chat_layout.itemAt(i)
+            w = item.widget() if item else None
+            if w in self._bubble_map:
+                ordered.append(self._bubble_map[w])
+        self.entries = ordered
 
     def load_entries(self, entries):
         for b in list(self._bubble_map.keys()):
@@ -552,8 +708,23 @@ class BlockEditor(QWidget):
         dt.setContentsMargins(10, 10, 10, 10)
         dt.setSpacing(8)
 
+        # Chat and choices live in a vertical splitter so either panel can be
+        # dragged bigger or smaller to suit the scene being edited.
+        dialog_splitter = QSplitter(Qt.Orientation.Vertical)
+        dialog_splitter.setHandleWidth(7)
+        dialog_splitter.setChildrenCollapsible(False)
+        dialog_splitter.setStyleSheet(
+            f"QSplitter::handle {{ background:{THEME['bg_border']}; }}"
+            f"QSplitter::handle:hover {{ background:{THEME['accent_primary']}; }}"
+        )
+
         self.chat = ChatLinesWidget(on_change=self._emit)
-        dt.addWidget(self.chat, 1)
+        dialog_splitter.addWidget(self.chat)
+
+        choices_panel = QWidget()
+        cp = QVBoxLayout(choices_panel)
+        cp.setContentsMargins(0, 0, 0, 0)
+        cp.setSpacing(6)
 
         choices_hdr = QHBoxLayout()
         choices_hdr.addWidget(lbl("Choices", 60))
@@ -562,7 +733,7 @@ class BlockEditor(QWidget):
         add_choice_btn.clicked.connect(lambda: self._add_choice())
         choices_hdr.addStretch()
         choices_hdr.addWidget(add_choice_btn)
-        dt.addLayout(choices_hdr)
+        cp.addLayout(choices_hdr)
 
         self.choices_container = QWidget()
         self.choices_container.setStyleSheet(f"background:{THEME['bg_main']};")
@@ -572,12 +743,18 @@ class BlockEditor(QWidget):
         choices_scroll = QScrollArea()
         choices_scroll.setWidget(self.choices_container)
         choices_scroll.setWidgetResizable(True)
-        choices_scroll.setMinimumHeight(160)
-        choices_scroll.setMaximumHeight(260)
+        choices_scroll.setMinimumHeight(60)
         choices_scroll.setStyleSheet(
             f"QScrollArea {{ border:none; background:{THEME['bg_main']}; }}"
         )
-        dt.addWidget(choices_scroll)
+        cp.addWidget(choices_scroll, 1)
+
+        dialog_splitter.addWidget(choices_panel)
+        dialog_splitter.setStretchFactor(0, 3)
+        dialog_splitter.setStretchFactor(1, 1)
+        dialog_splitter.setSizes([420, 190])
+
+        dt.addWidget(dialog_splitter, 1)
 
         tabs.addTab(dialog_tab, "Dialog")
 

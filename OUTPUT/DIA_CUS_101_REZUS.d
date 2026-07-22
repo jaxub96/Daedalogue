@@ -44,26 +44,26 @@ FUNC int DIA_CUS_101_REZUS_HELP_Condition()
 FUNC VOID DIA_CUS_101_REZUS_HELP_Info()
 {
 	Info_ClearChoices	(DIA_CUS_101_REZUS_HELP);
-	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_00"); //Hej ty! Stój.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_01"); //Szukamy kogoś.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_02"); //Według naszych informacji, przetrzymywano go tutaj. W twierdzy.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_03"); //Dopiero stamtąd wyszedłeś. Na pewno masz jakieś informacje.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_04"); //Odpowiedz nam na kilka pytań, a nagrodzimy twoją pomoc.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_00"); //Hej ty! StĂłj.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_01"); //Szukamy kogoĹ›.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_02"); //WedĹ‚ug naszych informacji, przetrzymywano go tutaj. W twierdzy.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_03"); //Dopiero stamtÄ…d wyszedĹ‚eĹ›. Na pewno masz jakieĹ› informacje.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_10_04"); //Odpowiedz nam na kilka pytaĹ„, a nagrodzimy twojÄ… pomoc.
 	Info_AddChoice	(DIA_CUS_101_REZUS_HELP,"",DIA_CUS_101_REZUS_HELP_YES);
 	Info_AddChoice	(DIA_CUS_101_REZUS_HELP,"",DIA_CUS_101_REZUS_HELP_NO);
 };
 
 func void DIA_CUS_101_REZUS_HELP_YES()
 {
-	AI_Output (other, self,"DIA_CUS_101_REZUS_HELP_YES_15_00"); //Pytajcie, ale nic nie obiecuję.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_YES_10_01"); //Wystarczy, że powiesz co wiesz.
+	AI_Output (other, self,"DIA_CUS_101_REZUS_HELP_YES_15_00"); //Pytajcie, ale nic nie obiecujÄ™.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_YES_10_01"); //Wystarczy, ĹĽe powiesz co wiesz.
 	Info_ClearChoices	(DIA_CUS_101_REZUS_HELP);
 };
 
 func void DIA_CUS_101_REZUS_HELP_NO()
 {
 	AI_Output (other, self,"DIA_CUS_101_REZUS_HELP_NO_15_00"); //Nie mam nic do powiedzenia.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_NO_10_01"); //Szkoda. Współpraca z nami zwykle się opłaca.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_HELP_NO_10_01"); //Szkoda. WspĂłĹ‚praca z nami zwykle siÄ™ opĹ‚aca.
 	Info_ClearChoices	(DIA_CUS_101_REZUS_HELP);
 };
 
@@ -87,13 +87,13 @@ FUNC int DIA_CUS_101_REZUS_QUESTIONS_Condition()
 FUNC VOID DIA_CUS_101_REZUS_QUESTIONS_Info()
 {
 	AI_Output (other, self,"DIA_CUS_101_REZUS_QUESTIONS_15_00"); //Kogo szukacie?
-	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_01"); //W tym więzieniu przetrzymywano pewnego przestępcę.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_02"); //Ma na imię Persiusz.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_03"); //Czy spotkałeś kogoś o takim imieniu?
+	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_01"); //W tym wiÄ™zieniu przetrzymywano pewnego przestÄ™pcÄ™.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_02"); //Ma na imiÄ™ Persiusz.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_03"); //Czy spotkaĹ‚eĹ› kogoĹ› o takim imieniu?
 	AI_Output (other, self,"DIA_CUS_101_REZUS_QUESTIONS_15_04"); //Nie przypominam sobie.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_05"); //Czy któryś ze strażników zwracał się tak do któregoś z więźniów?
+	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_05"); //Czy ktĂłryĹ› ze straĹĽnikĂłw zwracaĹ‚ siÄ™ tak do ktĂłregoĹ› z wiÄ™ĹşniĂłw?
 	AI_Output (other, self,"DIA_CUS_101_REZUS_QUESTIONS_15_06"); //Chyba nie.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_07"); //Dobrze. Oto twoja zapłata.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_QUESTIONS_10_07"); //Dobrze. Oto twoja zapĹ‚ata.
 	CreateInvItems(self, GOLD, 5);
 	B_GiveInvItems (self, hero, GOLD, 5);
 	B_GiveXP(50);
@@ -119,8 +119,8 @@ FUNC int DIA_CUS_101_REZUS_WHOAREYOU_Condition()
 
 FUNC VOID DIA_CUS_101_REZUS_WHOAREYOU_Info()
 {
-	AI_Output (other, self,"DIA_CUS_101_REZUS_WHOAREYOU_15_00"); //Kim jesteście?
-	AI_Output (self, other,"DIA_CUS_101_REZUS_WHOAREYOU_10_01"); //Jesteśmy wysłannikami Zakonu Sikka.
-	AI_Output (self, other,"DIA_CUS_101_REZUS_WHOAREYOU_10_02"); //Nie mogę ci więcej zdradzić. Prowadzimy delikatną sprawę.
+	AI_Output (other, self,"DIA_CUS_101_REZUS_WHOAREYOU_15_00"); //Kim jesteĹ›cie?
+	AI_Output (self, other,"DIA_CUS_101_REZUS_WHOAREYOU_10_01"); //JesteĹ›my wysĹ‚annikami Zakonu Sikka.
+	AI_Output (self, other,"DIA_CUS_101_REZUS_WHOAREYOU_10_02"); //Nie mogÄ™ ci wiÄ™cej zdradziÄ‡. Prowadzimy delikatnÄ… sprawÄ™.
 	AI_StopProcessInfos	(self);
 };
