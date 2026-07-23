@@ -1,0 +1,29 @@
+-- HELP --
+NPC - Hej ty! Stój.
+NPC - Szukamy kogoś.
+NPC - Według naszych informacji, przetrzymywano go tutaj. W twierdzy.
+NPC - Dopiero stamtąd wyszedłeś. Na pewno masz jakieś informacje.
+NPC - Odpowiedz nam na kilka pytań, a nagrodzimy twoją pomoc.
+
+-- YES --
+Hero - Pytajcie, ale nic nie obiecuję.
+NPC - Wystarczy, że powiesz co wiesz.
+
+-- NO --
+Hero - Nie mam nic do powiedzenia.
+NPC - Szkoda. Współpraca z nami zwykle się opłaca.
+
+-- QUESTIONS --
+Hero - Kogo szukacie?
+NPC - W tym więzieniu przetrzymywano pewnego przestępcę.
+NPC - Ma na imię Persiusz.
+NPC - Czy spotkałeś kogoś o takim imieniu?
+Hero - Nie przypominam sobie.
+NPC - Czy któryś ze strażników zwracał się tak do któregoś z więźniów?
+Hero - Chyba nie.
+NPC - Dobrze. Oto twoja zapłata.
+
+-- WHOAREYOU --
+Hero - Kim jesteście?
+NPC - Jesteśmy wysłannikami Zakonu Sikka.
+NPC - Nie mogę ci więcej zdradzić. Prowadzimy delikatną sprawę.

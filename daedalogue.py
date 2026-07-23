@@ -20,6 +20,17 @@ from daedalus_gen import (
     DialogBlock, sanitize, export_block_name,
     generate_dia_file, generate_constants_file, export_plain_dialog, parse_dia_file,export_followup_name
 )
+
+
+def _read_text_with_fallbacks(raw_bytes: bytes) -> str:
+    for encoding in ("utf-8", "cp1250", "cp1252", "latin-1"):
+        try:
+            text = raw_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if "�" not in text and "\ufffd" not in text:
+            return text
+    return raw_bytes.decode("utf-8", errors="replace")
 from widgets import BlockEditor, BlockListItem
 
 
@@ -79,6 +90,15 @@ class MainWindow(QMainWindow):
         text_btn = flat_btn("Export Text")
         text_btn.clicked.connect(self._export_text)
 
+        reset_btn = flat_btn("Reset")
+        reset_btn.setStyleSheet(
+            f"QPushButton {{ background:{THEME['bg_panel']}; color:{THEME['accent_hover']}; "
+            f"border:{THEME['border_width']} solid {THEME['bg_border']}; "
+            f"border-radius:{THEME['radius_md']}; padding:6px 14px; font-weight:600; }}"
+            f"QPushButton:hover {{ background:{THEME['accent_primary']}; color:{THEME['bg_main']}; }}")
+        reset_btn.setToolTip("Clear the NPC name/ID and every scene")
+        reset_btn.clicked.connect(self._reset)
+
         save_btn = QPushButton("Save")
         save_btn.setStyleSheet(
             f"QPushButton {{ background:{THEME['accent_primary']}; color:{THEME['bg_main']}; "
@@ -91,13 +111,15 @@ class MainWindow(QMainWindow):
         tb.addWidget(title); tb.addWidget(sep); tb.addStretch()
         tb.addWidget(hdr_lbl("NPC Name")); tb.addWidget(self.npc_name_edit)
         tb.addWidget(hdr_lbl("NPC ID"));   tb.addWidget(self.npc_id_edit)
-        tb.addWidget(open_btn); tb.addWidget(text_btn); tb.addWidget(save_btn)
+        tb.addWidget(open_btn); tb.addWidget(text_btn); tb.addWidget(reset_btn); tb.addWidget(save_btn)
         root.addWidget(topbar)
 
         splitter = QSplitter(Qt.Orientation.Horizontal); splitter.setHandleWidth(2)
 
-        # Sidebar
-        left = QWidget(); left.setFixedWidth(THEME["sidebar_width"])
+        # Sidebar — resizable, but kept within sane bounds via the splitter
+        left = QWidget()
+        left.setMinimumWidth(140)
+        left.setMaximumWidth(420)
         left.setStyleSheet(f"QWidget {{ background:{THEME['bg_panel']}; }}")
         lv = QVBoxLayout(left); lv.setContentsMargins(6, 10, 6, 8); lv.setSpacing(4)
 
@@ -165,6 +187,10 @@ class MainWindow(QMainWindow):
 
         splitter.addWidget(preview_panel)
         splitter.setSizes(THEME["splitter_sizes"])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(2, 1)
+        splitter.setChildrenCollapsible(False)
         root.addWidget(splitter, 1)
 
         self.npc_name_edit.textChanged.connect(self._refresh_preview)
@@ -194,6 +220,14 @@ class MainWindow(QMainWindow):
             cur = cur.parent_block
         return False
 
+    def _depth_for_block(self, block):
+        depth = 0
+        cur = block.parent_block
+        while cur is not None:
+            depth += 1
+            cur = cur.parent_block
+        return max(depth - 1, 0)
+
     def _add_block(self, block=None, parent_idx=None):
         b = block if block is not None else DialogBlock()
         insert_pos = self._find_insert_pos_after(parent_idx) if parent_idx is not None else len(self.blocks)
@@ -205,8 +239,9 @@ class MainWindow(QMainWindow):
         self.block_editors.insert(insert_pos, ed)
         self.editor_stack.addWidget(ed)
 
+        depth = self._depth_for_block(b)
         item = BlockListItem(insert_pos, b.name, on_select=self._select_block,
-                              on_remove=self._remove_block, is_followup=b.is_followup)
+                              on_remove=self._remove_block, is_followup=b.is_followup, depth=depth)
         self.block_items.insert(insert_pos, item)
         self.block_list_layout.insertWidget(insert_pos, item)
         self._reindex()
@@ -312,7 +347,10 @@ class MainWindow(QMainWindow):
             if b.is_followup:
                 parent_bn = b.parent_block.func_name if b.parent_block.is_followup \
                     else export_block_name(ni, b.parent_block.name)
-                b.func_name = export_followup_name(parent_bn, b.name)
+                # Preserve existing function names when opening/parsing files.
+                # Only generate a new follow-up name if none is set (empty string).
+                if not getattr(b, "func_name", ""):
+                    b.func_name = export_followup_name(parent_bn, b.name)
         for ed in self.block_editors:
             for cw in ed.get_choice_widgets():
                 if cw.linked_block is not None:
@@ -358,8 +396,8 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, "Open Dialog File", "", "Daedalus Dialog Files (*.d)")
         if not path: return
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
+            raw = open(path, "rb").read()
+            text = _read_text_with_fallbacks(raw)
             npc_name, npc_id, blocks = parse_dia_file(text)
         except Exception as e:
             QMessageBox.critical(self, "Could Not Open File", f"This file could not be read:\n{e}")
@@ -367,6 +405,24 @@ class MainWindow(QMainWindow):
         self._load_project(npc_name, npc_id, blocks)
         self.current_file_path = path
         self.setWindowTitle(f"Gothic Dialog Generator — {os.path.basename(path)}")
+
+    def _reset(self):
+        has_content = bool(
+            self.blocks or self.npc_name_edit.text().strip() or self.npc_id_edit.text().strip()
+        )
+        if has_content:
+            resp = QMessageBox.question(
+                self,
+                "Reset Everything",
+                "This clears the NPC name/ID and every scene. This cannot be undone.\n\nContinue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if resp != QMessageBox.StandardButton.Yes:
+                return
+        self._load_project("", "", [])
+        self.current_file_path = None
+        self.setWindowTitle("Gothic Dialog Generator")
 
     def _load_project(self, npc_name, npc_id, blocks):
         for ed in self.block_editors:

@@ -1,0 +1,22 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.pyre/
+*.log
+*.tmp
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Editor and local tooling
+.vscode/
+.idea/
+
+REFERENCE/

@@ -14,6 +14,8 @@ THEME = {
 "bg_border":        "#b8a374",   # brass/leather line — was a flat gray, now has warmth
 "bg_input":         "#f1e9d8",   # same as main bg, but with border
 "bg_input_border":  "#b8a374",   # brass/leather line —
+"bg_choice":        "#372E29",
+"bg_choice_input":  "#302925",
 "text_primary":     "#2e2418",   # iron-gall ink
 "text_secondary":   "#5a4a35",
 "text_muted":        "#8c7a5c",
