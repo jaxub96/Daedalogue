@@ -336,14 +336,14 @@ class ChoiceWidget(QFrame):
         self.on_remove = on_remove
         self.linked_block = None   # the auto-created follow-up DialogBlock, if any
         self.setStyleSheet(
-            f"QFrame {{ background:{THEME['bg_choice']}; "
+            f"QFrame {{ background:{THEME['bg_panel']}; "
             f"border:{THEME['border_width']} solid {THEME['bg_border']}; "
             f"border-radius:{THEME['radius_md']}; margin:1px; "
             f"border-left:3px solid {THEME['accent_secondary']}; }}")
         lay = QHBoxLayout(self); lay.setContentsMargins(6, 4, 6, 4); lay.setSpacing(6)
         self.label = QLineEdit(); self.label.setPlaceholderText("Choice shown to player…")
         self.label.setStyleSheet(
-            f"QLineEdit {{ background:{THEME['bg_choice_input']}; color:{THEME['accent_hover']}; "
+            f"QLineEdit {{ background:{THEME['bg_panel']}; color:{THEME['accent_hover']}; "
             f"border:none; border-radius:2px; padding:4px 6px; font-weight:500; }}")
         self.func = QLineEdit(); self.func.setPlaceholderText("Handler func")
         self.func.setFixedWidth(210); self.func.setStyleSheet(SS["field"])
