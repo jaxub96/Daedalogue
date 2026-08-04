@@ -55,7 +55,7 @@ FUNC VOID DIA_GOD_100_MOREL_whoareyou_Info()
 func void DIA_GOD_100_MOREL_whoareyou_Choice1()
 {
 	AI_Output (other, self,"DIA_GOD_100_MOREL_whoareyou_Choice1_15_00"); //Nie mam teraz czasu.
-	AI_Output (self, other,"DIA_GOD_100_MOREL_whoareyou_Choice1_10_01"); //Ty draniu. Nie masz litości.
+	AI_Output (self, other,"DIA_GOD_100_MOREL_whoareyou_Choice1_10_01"); //NIEEEEE!
 	B_GiveXP(100);
 	Info_ClearChoices	(DIA_GOD_100_MOREL_whoareyou);
 };
@@ -68,4 +68,35 @@ func void DIA_GOD_100_MOREL_whoareyou_Choice2()
 	Log_SetTopicStatus	(beerandweed, LOG_RUNNING);
 	B_LogEntry	(beerandweed,"Niejaki Morel z miasta chce abym przyniósł mu trochę ziela i piwo. Chyba naprawdę tego potrzebuje.");
 	Info_ClearChoices	(DIA_GOD_100_MOREL_whoareyou);
+};
+
+// ============================================================
+// 			weedandbeer
+// ============================================================
+instance DIA_GOD_100_MOREL_weedandbeer (C_INFO)
+{
+	npc			= GOD_100_MOREL;
+	nr			= 2;
+	condition	= DIA_GOD_100_MOREL_weedandbeer_Condition;
+	information	= DIA_GOD_100_MOREL_weedandbeer_Info;
+	permanent	= 0;
+};
+
+FUNC int DIA_GOD_100_MOREL_weedandbeer_Condition()
+{
+	return 1;
+};
+
+FUNC VOID DIA_GOD_100_MOREL_weedandbeer_Info()
+{
+	AI_Output (other, self,"DIA_GOD_100_MOREL_weedandbeer_15_00"); //Oto twoje piwo.
+	CreateInvItem(self, TUBORG CLASSIC);
+	B_GiveInvItems (self, hero, TUBORG CLASSIC, 1);
+	AI_Output (self, other,"DIA_GOD_100_MOREL_weedandbeer_10_01"); //Dzięki... A grzyby?
+	AI_Output (other, self,"DIA_GOD_100_MOREL_weedandbeer_15_02"); //Proszę!
+	CreateInvItem(self, MagicznyGrzyb);
+	B_GiveInvItems (self, hero, MagicznyGrzyb, 1);
+	AI_Output (self, other,"DIA_GOD_100_MOREL_weedandbeer_10_03"); //Niemożliwe...
+	AI_Output (self, other,"DIA_GOD_100_MOREL_weedandbeer_10_04"); //Skąd to masz?
+	AI_StopProcessInfos	(self);
 };

@@ -1,0 +1,5 @@
+---
+tags:
+  - NPC
+PLACE: "[[PRISON]]"
+---
