@@ -270,9 +270,9 @@ class EffectBubble(QFrame, _DropTargetMixin):
     Drag the ⋮⋮ handle to reorder it within the conversation."""
 
     ICONS = {
-        "give_item": "🎁",
+        "give_item": "🎘",
         "take_item": "📤",
-        "give_xp": "⭐",
+        "give_xp": "⭘",
         "log": "📜",
         "routine": "🧭",
         "follow": "🧭",
