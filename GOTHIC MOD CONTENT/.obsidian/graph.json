@@ -5,47 +5,61 @@
   "showAttachments": false,
   "hideUnresolved": false,
   "showOrphans": true,
-  "collapse-color-groups": false,
+  "collapse-color-groups": true,
   "colorGroups": [
     {
       "query": "tag:#ITEM  ",
       "color": {
         "a": 1,
-        "rgb": 14701138
+        "rgb": 15380142
       }
     },
     {
       "query": "tag:#MISSION  ",
       "color": {
         "a": 1,
-        "rgb": 14725458
+        "rgb": 16479458
       }
     },
     {
       "query": "tag:#NPC  ",
       "color": {
         "a": 1,
-        "rgb": 5431008
+        "rgb": 9563374
       }
     },
     {
       "query": "tag:#PLACE  ",
       "color": {
         "a": 1,
-        "rgb": 5431378
+        "rgb": 13957076
+      }
+    },
+    {
+      "query": "tag:#GUILD  ",
+      "color": {
+        "a": 1,
+        "rgb": 5431473
+      }
+    },
+    {
+      "query": "tag:#CONCEPT  ",
+      "color": {
+        "a": 1,
+        "rgb": 5419488
       }
     }
   ],
   "collapse-display": false,
   "showArrow": false,
-  "textFadeMultiplier": 0,
-  "nodeSizeMultiplier": 1,
-  "lineSizeMultiplier": 1,
+  "textFadeMultiplier": -1,
+  "nodeSizeMultiplier": 2.39941463414634,
+  "lineSizeMultiplier": 1.66513170731707,
   "collapse-forces": false,
-  "centerStrength": 0.456780487804878,
-  "repelStrength": 9.63512195121951,
-  "linkStrength": 1,
-  "linkDistance": 232,
-  "scale": 1.0000000000000042,
+  "centerStrength": 0,
+  "repelStrength": 8.26146341463415,
+  "linkStrength": 0.656585365853659,
+  "linkDistance": 80,
+  "scale": 0.3628873693012176,
   "close": false
 }

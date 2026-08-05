@@ -3,9 +3,9 @@ tags:
   - CONCEPT
 ---
 
-In-game measure of Hero's deeds.
+In-game value of Hero's deeds.
 
-Good deeds increase morality
-Bad deeds decrease morailty
+Moral deeds increase morality
+Immoral deeds decrease morality
 
 May affect people's opinion, friendliness, access to temple, prices, weather.

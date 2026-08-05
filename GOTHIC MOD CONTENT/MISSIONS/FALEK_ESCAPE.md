@@ -1,6 +1,10 @@
 ---
 tags:
   - MISSION
+EXP: EXP_CONSTANT
+REWARD:
+  - falek-friend
+  - "[[remus_amulet]]"
 ---
 Help [[Falek]] escape the cultists' [[DUNGEON]].
 

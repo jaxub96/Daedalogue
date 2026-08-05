@@ -2,6 +2,8 @@
 tags:
   - MISSION
 PLACE: "[[SICCA_TEMPLE]]"
+EXP: EXP_CONSTANT
+REWARD: REWARD
 ---
 
 Once all three are completed, you will do the final trial.

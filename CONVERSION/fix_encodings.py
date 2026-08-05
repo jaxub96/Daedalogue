@@ -1,131 +1,148 @@
 #!/usr/bin/env python3
-"""
-Normalize text files to UTF-8.
-
-Handles three cases:
-1. Already valid UTF-8            -> leave unchanged
-2. Windows-1250 encoded           -> convert to UTF-8
-3. UTF-8 mojibake from CP1250     -> repair and save as UTF-8
-
-The script processes all matching files recursively from the directory
-where this script is located.
-
-A .bak backup is created before any file is modified.
-"""
-
 from pathlib import Path
 from tkinter import Tk, filedialog
 
-# Hide the main Tk window
 root = Tk()
 root.withdraw()
-root.attributes("-topmost", True)
-
-folder = filedialog.askdirectory(
-    title="Select the folder containing the script files"
-)
-
+folder = filedialog.askdirectory(title="Select script folder")
 root.destroy()
 
 if not folder:
-    print("No folder selected.")
     raise SystemExit
 
 ROOT = Path(folder)
 
-# File types to process
-EXTENSIONS = {
-    ".d"
-}
-
-# Characters commonly seen when CP1250 text was misinterpreted as CP1252
-MOJIBAKE_CHARS = set("³œ¿¹æêñÆ£ÐØ")
+EXTENSIONS = {".d"}
 
 
+POLISH_CHARS = set(
+    "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"
+)
 
-def looks_like_mojibake(text: str) -> bool:
-    """Heuristic for Polish CP1250 mojibake."""
-    count = sum(text.count(c) for c in MOJIBAKE_CHARS)
+BAD_MOJIBAKE = (
+    "Ä",
+    "Å",
+    "Ă",
+    "Ĺ",
+    "â€",
+    "Ã",
+    "Â",
+    "Ð",
+    "Ø",
+    "œ",
+    "ž",
+    "š",
+)
 
-    # Common broken fragments
-    patterns = (
-        "siê",
-        "k³",
-        "³a",
-        "¿",
-        "œ",
-        "¹",
-        "ê",
-        "æ",
-        "ñ",
+
+def score_text(text):
+    score = 0
+
+    # Correct Polish letters are good
+    score += sum(text.count(c) for c in POLISH_CHARS) * 5
+
+    # Mojibake markers are bad
+    score -= sum(text.count(c) for c in BAD_MOJIBAKE) * 10
+
+    # Replacement characters are very bad
+    score -= text.count("�") * 100
+
+    return score
+
+
+def repair_utf8_mojibake(text):
+    """
+    Fix:
+    UTF-8 bytes interpreted as CP1252 and saved as UTF-8
+    """
+    try:
+        fixed = text.encode("cp1252").decode("utf-8")
+
+        if score_text(fixed) > score_text(text):
+            return fixed
+
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+
+    return text
+
+
+def decode_best(raw):
+    candidates = []
+
+    encodings = (
+        "utf-8",
+        "cp1250",
+        "cp1252",
+        "latin1",
     )
 
-    count += sum(text.count(p) for p in patterns)
+    for enc in encodings:
+        try:
+            text = raw.decode(enc)
+            text = repair_utf8_mojibake(text)
 
-    return count >= 2
+            candidates.append(
+                (score_text(text), text, enc)
+            )
 
+        except UnicodeDecodeError:
+            pass
 
-def repair_mojibake(text: str) -> str:
-    """Undo CP1250 -> CP1252 mojibake."""
-    return text.encode("cp1252").decode("cp1250")
+    if not candidates:
+        raise UnicodeDecodeError(
+            "unknown",
+            raw,
+            0,
+            1,
+            "No usable encoding"
+        )
 
+    candidates.sort(
+        key=lambda x: x[0],
+        reverse=True
+    )
 
-converted = 0
-repaired = 0
-unchanged = 0
-failed = 0
+    return candidates[0]
+
 
 for path in ROOT.rglob("*"):
+
     if not path.is_file():
         continue
 
     if path.suffix.lower() not in EXTENSIONS:
         continue
 
+    raw = path.read_bytes()
+
     try:
-        raw = path.read_bytes()
-
-        # Case 1: Valid UTF-8
+        score, fixed, encoding = decode_best(raw)
+        print("FILE:", path)
+        print("ENCODING CHOSEN:", encoding)
+        print("BEFORE:", raw.decode("utf-8", errors="replace")[:200])
+        print("AFTER :", fixed[:200])
+        current = None
         try:
-            text = raw.decode("utf-8")
-
-            if looks_like_mojibake(text):
-                fixed = repair_mojibake(text)
-
-                if fixed != text:
-                    path.with_suffix(path.suffix + ".bak").write_bytes(raw)
-                    path.write_text(fixed, encoding="utf-8", newline="")
-                    repaired += 1
-                    print(f"[REPAIRED ] {path}")
-                else:
-                    unchanged += 1
-                    print(f"[UNCHANGED] {path}")
-            else:
-                unchanged += 1
-                print(f"[UTF-8    ] {path}")
-
-            continue
-
-        except UnicodeDecodeError:
+            current = raw.decode("utf-8")
+        except:
             pass
 
-        # Case 2: Assume CP1250
-        text = raw.decode("cp1250")
+        if current != fixed:
+            backup = path.with_suffix(path.suffix + ".bak")
+            backup.write_bytes(raw)
 
-        path.with_suffix(path.suffix + ".bak").write_bytes(raw)
-        path.write_text(text, encoding="utf-8", newline="")
+            path.write_text(
+                fixed,
+                encoding="utf-8",
+                newline=""
+            )
 
-        converted += 1
-        print(f"[CONVERTED] {path}")
+            print(
+                f"[FIXED] {path} ({encoding}, score {score})"
+            )
+        else:
+            print(f"[OK] {path}")
 
     except Exception as e:
-        failed += 1
-        print(f"[FAILED   ] {path}: {e}")
-
-print()
-print("Summary")
-print("-------")
-print(f"UTF-8 unchanged : {unchanged}")
-print(f"CP1250 converted: {converted}")
-print(f"Mojibake fixed  : {repaired}")
-print(f"Failed          : {failed}")
+        print(f"[FAILED] {path}: {e}")

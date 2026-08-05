@@ -1,0 +1,8 @@
+---
+tags:
+  - MISSION
+REWARD:
+  - REWARD
+EXP: EXP_CONSTANT
+GIVER: "[[HERO]]"
+---

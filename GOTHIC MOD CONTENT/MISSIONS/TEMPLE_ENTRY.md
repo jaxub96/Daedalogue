@@ -1,6 +1,8 @@
 ---
 tags: MISSION
 PLACE: "[[SICCA_TEMPLE]]"
+EXP: EXP_CONSTANT
+REWARD: REWARD
 ---
 - prove that you have good intentions
     - do mission

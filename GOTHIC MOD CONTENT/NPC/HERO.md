@@ -1,6 +1,7 @@
 ---
 tags:
   - NPC
+GUILD: "[[NONE]]"
 ---
 # MAIN CHARACTER
 Player defines 
