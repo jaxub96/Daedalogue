@@ -60,25 +60,46 @@ tags:
 
 Offers you [[NOVICE_TRAINING]]
 
+[[Nestor]]: 
+"This [[dagger]] looks like a necromancer item known as a "[[Harvester]]". According to legends, killing someone with a [[Harvester]] extracts their soul. Necromancers used souls to magically enhance objects, making them more powerful in battle, but in exchange corrupting their own soul, for each soul they harvest. This practice has been forbidden by the Mage Council a century ago, and was believed to be extinct. "
 
-tell him about [[dagger]]
-Dagger is a necromancer item. Killing someone with it extracts their soul. Souls can be used in Alchemy. Dagger corrupts the user, more for each soul. Necromancy is forbidden. 
 
-- The dagger should be destroyed
-- How? Can I leave it with you?
-- No. Bring it to the court wizard *[[Lazarus]]*. He will know what to do.
-- How to get to [[Lazarus]]? 
-- You will have to be admitted to the court somehow.
+HERO:
+"What happened to the harvesters?"
+
+Nestor:
+"Some were destroyed by the Mage Counsel, others have gone missing. If this dagger really is a harvester, it should be destroyed at once."
+
+HERO: 
+"What does that have to do with me?"
+
+Nestor: 
+"The dagger is in your possession. Whether you want it or not, you are responsible for it. If it's ever used for evil, by you or someone else, the Custodians will hunt you down and punish you."
+
+HERO
+"Custodians?"
+
+Nestor
+"An ancient order, serving the Sicca. They protect the realm against demonic cults, root out heresy and persecute practitioners of forbidden arts. The latter role has been dormant for many decades of course."
+
+HERO:
+"Then what should I do? Can I leave it to you?"
+
+Nestor:
+"Absolutely kurwa not. I can't let the dagger corrupt the sacred temple of Sicca. Take it to the Court Wizard, [[Lazarus]]. As a member of the Mage Counsel, he will know what to do."
+
+
+
 >[!tip] [[WIZARD'S COUNSEL]]
 
 assigns [[CULT_DUNGEON]] if not done.
 
-Sends you to the **[[CITY]]** to be recruited to the [[Custodians]]
+Sends you to the **[[CITY]]** to be recruited to the [[CUSTODIAN]]
 
 
 
 ## **[[CITY]]**
-the [[Custodians]] are looking for volunteer workers to hunt the [[Cultists]]
+the [[CUSTODIAN]] are looking for volunteer workers to hunt the [[Cultists]]
 you can join if you're strong enough.
 First mission - interrogate a captured cultist about their hideout.
 
