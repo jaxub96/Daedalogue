@@ -25,18 +25,17 @@ class DialogChoice:
         self.func_name = func_name
 
 class EffectEntry:
-    """A give-item / take-item / give-xp / log-entry effect, placed inline
-    among a scene's DialogLines at whatever point it should fire."""
+    """A give-item / take-item / give-xp / log-entry / routine effect, placed
+    inline among a scene's DialogLines at whatever point it should fire."""
     def __init__(self, kind, **fields):
         self.kind = kind          # "give_item" | "take_item" | "give_xp" | "log" | "routine" | "follow" | "unfollow"
         self.item = fields.get("item", "")
         self.count = fields.get("count", 1)
         self.xp = fields.get("xp", "")
-        default_routine = "START" if kind == "unfollow" else "PLACEHOLDER_ROUTINE"
-        self.routine = fields.get("routine", default_routine)
         self.log_topic = fields.get("log_topic", "")
         self.log_status = fields.get("log_status", "LOG_RUNNING")
         self.log_entry = fields.get("log_entry", "")
+        self.routine = fields.get("routine", "")
 
     def summary(self):
         """Short human-readable label, used by the effect bubble in the UI."""
@@ -51,11 +50,11 @@ class EffectEntry:
             if self.log_status: parts.append(self.log_status)
             return " · ".join(parts)
         if self.kind == "routine":
-            return f"NPC changes routine ({self.routine})"
+            return f"Routine: {self.routine}" if self.routine else "Change routine"
         if self.kind == "follow":
-            return f"NPC joins party"
+            return "NPC follows Hero"
         if self.kind == "unfollow":
-            return f"NPC leaves party → {self.routine}"
+            return f"Resume routine: {self.routine}" if self.routine else "Stop following"
         return self.kind
 
 
@@ -123,29 +122,20 @@ def _entry_lines(entries, bn):
         elif e.kind == "give_xp":
             if not e.xp: continue
             out.append(f"\tB_GiveXP({e.xp});")
-        elif e.kind == "routine":
-            # NPC changes its routine.
-            out.append("\tAI_StopProcessInfos(self);")
-            out.append(f'\tNpc_ExchangeRoutine(self,"{e.routine or "PLACEHOLDER_ROUTINE"}");')
-            # out.append("\tself.aivar[AIV_PARTYMEMBER] = TRUE;")
-        elif e.kind == "follow":
-            # Matches DIA_Addon_Thiefow_ComeOn_Info exactly: stop, switch to the
-            # FOLLOW pseudo-routine, then flag as party member.
-            out.append("\tAI_StopProcessInfos(self);")
-            out.append('\tNpc_ExchangeRoutine(self,"FOLLOW");')
-            out.append("\tself.aivar[AIV_PARTYMEMBER] = TRUE;")
-        elif e.kind == "unfollow":
-            # Matches DIA_Addon_Thiefow_GoHome_Info: stop, un-flag as party
-            # member, then hand the NPC back to a normal standing routine.
-            out.append("\tAI_StopProcessInfos(self);")
-            out.append("\tself.aivar[AIV_PARTYMEMBER] = FALSE;")
-            out.append(f'\tNpc_ExchangeRoutine(self,"{e.routine or "START"}");')
         elif e.kind == "log":
             if not e.log_topic: continue
             out.append(f"\tLog_CreateTopic\t({e.log_topic}, {_log_type(e.log_status)});")
             out.append(f"\tLog_SetTopicStatus\t({e.log_topic}, {e.log_status});")
             if e.log_entry:
                 out.append(f'\tB_LogEntry\t({e.log_topic},"{e.log_entry}");')
+        elif e.kind == "routine":
+            if not e.routine: continue
+            out.append(f'\tNpc_ExchangeRoutine(self, "{e.routine}");')
+        elif e.kind == "follow":
+            out.append("\tAI_StartState(self, ZS_FOLLOW, 0, \"\");")
+        elif e.kind == "unfollow":
+            routine = e.routine or "START"
+            out.append(f'\tNpc_ExchangeRoutine(self, "{routine}");')
     return out
 
 
@@ -246,20 +236,57 @@ def export_plain_dialog(blocks):
     return "\n".join(out).strip() + "\n"
 
 
+def parse_plain_dialog(text):
+    """The inverse of export_plain_dialog(): reads a dropped-in text file of
+
+        -- Scene Name --
+        NPC - line
+        Hero - line
+
+    and turns it into a flat list of top-level DialogBlocks (dialog lines
+    only — no choices/effects, since the plain format doesn't carry those).
+    Lines before the first '-- Name --' header land in an 'Untitled' scene.
+    """
+    header_re  = re.compile(r'^--\s*(.+?)\s*--$')
+    speaker_re = re.compile(r'^(NPC|Hero)\s*-\s*(.*)$', re.I)
+
+    blocks = []
+    current = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        header_m = header_re.match(line)
+        if header_m:
+            current = DialogBlock()
+            current.name = header_m.group(1).strip()
+            blocks.append(current)
+            continue
+        speaker_m = speaker_re.match(line)
+        if speaker_m:
+            if current is None:
+                current = DialogBlock()
+                current.name = "Untitled"
+                blocks.append(current)
+            speaker = "self" if speaker_m.group(1).lower() == "npc" else "other"
+            current.entries.append(DialogLine(speaker=speaker, text=speaker_m.group(2).strip()))
+    return blocks
+
+
 # ── Parser (round-trips files produced by this tool) ───────────────────────────
-_LINE_RE     = re.compile(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)', re.I)
-_CHOICE_RE   = re.compile(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);', re.I)
-_ROUTINE_RE  = re.compile(r'Npc_ExchangeRoutine\s*\(self,\s*"([^"]*)"\);', re.I)
-_GIVE_RE     = re.compile(
+_LINE_RE   = re.compile(r'AI_Output\s*\((\w+),\s*(\w+),\s*"[^"]*"\);\s*//(.*)')
+_CHOICE_RE = re.compile(r'Info_AddChoice\s*\(\s*\w+\s*,\s*"([^"]*)"\s*,\s*(\w+)\s*\);')
+_GIVE_RE   = re.compile(
     r'(?:CreateInvItems?\(self,\s*([^,)]+)(?:,\s*(\d+))?\);\s*)?'
-    r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);', re.I)
-_TAKE_RE     = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);', re.I)
-_XP_RE       = re.compile(r'B_GiveXP\(([^)]*)\);', re.I)
-_AIVAR_RE    = re.compile(r'self\.aivar\[AIV_PARTYMEMBER\]\s*=\s*(TRUE|FALSE)', re.I)
-_LOG_RE      = re.compile(
+    r'B_GiveInvItems\s*\(self,\s*\w+,\s*([^,]+),\s*(\d+)\);')
+_TAKE_RE   = re.compile(r'B_GiveInvItems\s*\(other,\s*self,\s*([^,]+),\s*(\d+)\);')
+_XP_RE     = re.compile(r'B_GiveXP\(([^)]*)\);')
+_LOG_RE    = re.compile(
     r'Log_CreateTopic\s*\(([^,]+),\s*\w+\);\s*'
     r'Log_SetTopicStatus\s*\(([^,]+),\s*(\w+)\);'
-    r'(?:\s*B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);)?', re.I)
+    r'(?:\s*B_LogEntry\s*\([^,]+,\s*"([^"]*)"\);)?')
+_ROUTINE_RE = re.compile(r'Npc_ExchangeRoutine\s*\(self,\s*"([^"]*)"\);')
+_FOLLOW_RE  = re.compile(r'AI_StartState\s*\(self,\s*ZS_FOLLOW,\s*0,\s*""\);')
 
 
 def _parse_body(seg, bn):
@@ -277,25 +304,14 @@ def _parse_body(seg, bn):
         found.append((m.start(), EffectEntry("take_item", item=m.group(1).strip(), count=int(m.group(2)))))
     for m in _XP_RE.finditer(seg):
         found.append((m.start(), EffectEntry("give_xp", xp=m.group(1).strip())))
-    for m in _ROUTINE_RE.finditer(seg):
-        routine = m.group(1).strip()
-        if routine == "FOLLOW":
-            found.append((m.start(), EffectEntry("follow")))
-        else:
-            # A plain routine switch is ambiguous on its own — look at whichever
-            # AIV_PARTYMEMBER assignment sits nearest to it. TRUE means the NPC
-            # is being sent off to lead/guide; FALSE means it's stopping (the
-            # DIA_Addon_Thiefow_GoHome "wait here" pattern).
-            window = seg[max(0, m.start() - 150):m.end() + 150]
-            av = _AIVAR_RE.search(window)
-            if av and av.group(1).upper() == "FALSE":
-                found.append((m.start(), EffectEntry("unfollow", routine=routine)))
-            else:
-                found.append((m.start(), EffectEntry("routine", routine=routine)))
     for m in _LOG_RE.finditer(seg):
         found.append((m.start(), EffectEntry(
             "log", log_topic=m.group(1).strip(), log_status=m.group(3).strip(),
             log_entry=(m.group(4) or ""))))
+    for m in _ROUTINE_RE.finditer(seg):
+        found.append((m.start(), EffectEntry("routine", routine=m.group(1).strip())))
+    for m in _FOLLOW_RE.finditer(seg):
+        found.append((m.start(), EffectEntry("follow")))
 
     found.sort(key=lambda x: x[0])
     entries = [e for _, e in found]
@@ -316,11 +332,7 @@ def _apply_body(b, body):
 def _parse_followups(parent_block, choices, full_text, blocks_out):
     for ch in choices:
         name = ch.func_name
-        m = re.search(rf'func void {re.escape(name)}\s*\(\)\s*\{{(.*?)\n\}};', full_text, re.S | re.I)
-        if not m:
-            # Some Gothic files use a different layout or naming convention. Fall back to a
-            # more permissive search for a function body by name.
-            m = re.search(rf'func\s+void\s+{re.escape(name)}\s*\(\)\s*\{{(.*?)\n\}};', full_text, re.S | re.I)
+        m = re.search(rf'func void {re.escape(name)}\s*\(\)\s*\{{(.*?)\n\}};', full_text, re.S)
         if not m: continue
         fb = DialogBlock()
         fb.is_followup = True
@@ -368,39 +380,15 @@ def parse_dia_file(text):
         b.description = field(r'description\s*=\s*"([^"]*)"\s*;', "")
         b.is_trade = bool(re.search(r'Trade\s*=\s*1\s*;', inst_body))
 
-        if not npc_id:
-            npc_match = re.search(r'\bnpc\s*=\s*([A-Za-z0-9_\.]+);', inst_body)
-            if npc_match:
-                npc_id = npc_match.group(1).strip()
-
-        cond_patterns = [
-            rf'FUNC int {re.escape(bn)}_Condition\(\)\s*\{{(.*?)\}};\s*FUNC VOID',
-            rf'func int {re.escape(bn)}_condition\(\)\s*\{{(.*?)\}};\s*func void',
-            rf'FUNC int {re.escape(bn)}_Condition\(\)\s*\{{(.*?)\}};',
-            rf'func int {re.escape(bn)}_condition\(\)\s*\{{(.*?)\}};',
-        ]
-        cond_body = ""
-        for pat in cond_patterns:
-            cond_m = re.search(pat, seg, re.S | re.I)
-            if cond_m:
-                cond_body = cond_m.group(1).strip()
-                break
+        cond_m = re.search(rf'FUNC int {re.escape(bn)}_Condition\(\)\s*\{{(.*?)\}};\s*FUNC VOID', seg, re.S)
+        cond_body = cond_m.group(1).strip() if cond_m else ""
         if cond_body and cond_body != "return 1;":
             b.condition_expr = cond_body
 
-        info_patterns = [
-            rf'FUNC VOID {re.escape(bn)}_Info\(\)\s*\{{(.*)',
-            rf'func void {re.escape(bn)}_info\(\)\s*\{{(.*)',
-        ]
-        info_body = ""
-        for pat in info_patterns:
-            info_m = re.search(pat, seg, re.S | re.I)
-            if info_m:
-                info_body = info_m.group(1)
-                break
-        if info_body:
-            cut = info_body.find("\n};")
-            if cut != -1: info_body = info_body[:cut]
+        info_m = re.search(rf'FUNC VOID {re.escape(bn)}_Info\(\)\s*\{{(.*)', seg, re.S)
+        info_body = info_m.group(1) if info_m else ""
+        cut = info_body.find("\n};")
+        if cut != -1: info_body = info_body[:cut]
 
         body = _parse_body(info_body, bn)
         _apply_body(b, body)

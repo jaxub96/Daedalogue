@@ -17,23 +17,23 @@ tags:
 	- No, I don't know you
 		- -1 to [[MORALITY]]
 >[!TIP] [[FAVOR]]
-- [[Arideus]] takes you to commander [[Malachus]]
-- [[Malachus]] signs you off, gives back your inventory
+- [[Arideus]] takes you to commander [[NPC/Malachus]]
+- [[NPC/Malachus]] signs you off, gives back your inventory
 - get a [[dagger]], some gold and a [[mysterious note]]
 
 > [!TIP] [[MYSTERY_GIFT]]
 
-- ask [[Malachus]] about items:
+- ask [[NPC/Malachus]] about items:
 	- "Yes they are mine" (lie)
 		- -1 to [[MORALITY]]
 		- you claim the items
 	- "These items aren't mine" (true)
 		- +1 to [[MORALITY]]
 		- ask about items
-		- [[Malachus]] says they are under your name
+		- [[NPC/Malachus]] says they are under your name
 		- not his business.
 		- suggests to sell [[dagger]], or donate to Temple
-- *[[Malachus]]* directs you to a nearby **[[SICCA_TEMPLE]]** for work/shelter
+- *[[NPC/Malachus]]* directs you to a nearby **[[SICCA_TEMPLE]]** for work/shelter
 ## **[[ROAD]]**
 - A robber named *[[Persius]]* stops you, and tries to rob you of the [[dagger]]
     - give [[dagger]]

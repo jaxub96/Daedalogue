@@ -15,12 +15,26 @@
               "type": "markdown",
               "state": {
                 "file": "MISSIONS/!MAIN STORY.md",
-                "mode": "preview",
+                "mode": "source",
                 "source": false
               },
               "pinned": true,
               "icon": "lucide-file",
               "title": "!MAIN STORY"
+            }
+          },
+          {
+            "id": "609a258e640bc5f6",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Kilian-Dialog.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Kilian-Dialog"
             }
           },
           {
@@ -36,21 +50,21 @@
             }
           },
           {
-            "id": "acc640c23575496c",
+            "id": "22d5563f77058266",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "ITEMS/gabriel_journal.md",
-                "mode": "source",
+                "file": "git_github_cheatsheet.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "gabriel_journal"
+              "title": "git_github_cheatsheet"
             }
           }
         ],
-        "currentTab": 2
+        "currentTab": 3
       }
     ],
     "direction": "vertical"
@@ -128,7 +142,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "ITEMS/gabriel_journal.md",
+                "file": "git_github_cheatsheet.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -216,12 +230,19 @@
       "bases:Create new base": false
     }
   },
-  "active": "acc640c23575496c",
+  "active": "22d5563f77058266",
   "lastOpenFiles": [
+    "Malachus-Dialog.md",
+    "git_github_cheatsheet.md",
+    "Unconfirmed 736929.crdownload",
+    "TEMPLATES/dialog.md",
+    "Kilian-Dialog.md",
+    "TEMPLATES/mission.md",
+    "Arideus-Dialog.md",
+    "NPC/Kilian.md",
     "MISSIONS/!MAIN STORY.md",
-    "MISSIONS/TEMPLE_WORK.md",
     "ITEMS/gabriel_journal.md",
-    "Untitled.md",
+    "MISSIONS/TEMPLE_WORK.md",
     "NPC/Arideus.md",
     "NPC/Cultist.md",
     "NPC/HERO.md",
@@ -236,14 +257,8 @@
     "GUILDS/GUARD.md",
     "MISSIONS/KAMIENNY_MOST.md",
     "GUILDS/CULT.md",
-    "NPC/Kilian.md",
     "NPC/Falek.md",
     "NPC/Moneo.md",
-    "NPC/Persius.md",
-    "NPC/Remus.md",
-    "NPC/Seneka.md",
-    "MISSIONS/CULT_DUNGEON.md",
-    "MISSIONS/FALEK_ESCAPE.md",
     "TEMPLATES",
     "GUILDS",
     "CONCEPTS",
