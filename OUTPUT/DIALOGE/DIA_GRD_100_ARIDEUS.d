@@ -53,6 +53,8 @@ FUNC VOID DIA_GRD_100_ARIDEUS_freedom_Info()
 	Log_CreateTopic	(FREEDOM, LOG_NOTE);
 	Log_SetTopicStatus	(FREEDOM, LOG_NOTE);
 	B_LogEntry	(FREEDOM,"Zwolniono mnie z aresztu, ale Strażnik ARIDEUS nie zdradził mi powodu. Tak czy siak, wychodzę na wolność.");
+	Npc_ExchangeRoutine(self, "PLACEHOLDER_ROUTINE");
+	AI_StopProcessInfos	(self);
 };
 
 // ============================================================
@@ -93,7 +95,7 @@ instance DIA_GRD_100_ARIDEUS_where (C_INFO)
 	nr			= 3;
 	condition	= DIA_GRD_100_ARIDEUS_where_Condition;
 	information	= DIA_GRD_100_ARIDEUS_where_Info;
-	permanent	= 0;
+	permanent	= 1;
 	description	= "Dokąd mam iść?";
 };
 
