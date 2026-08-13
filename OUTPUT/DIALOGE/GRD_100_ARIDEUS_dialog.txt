@@ -1,0 +1,21 @@
+-- freedom --
+NPC - To twój szczęśliwy dzień.
+NPC - Wychodzisz na wolność.
+NPC - No.. Ruszaj się, zanim ktoś zmieni zdanie.
+Hero - Dlaczego zwalniacie mnie właśnie teraz?
+NPC - Widocznie komuś na tobie zależy.
+NPC - A teraz za mną!
+
+-- discharge --
+NPC - Dalej pójdziesz sam.
+NPC - Tylko się nie rozczulaj. Może jeszcze tu wrócisz!
+NPC - Teraz idź korytarzem i po schodach do góry.
+NPC - Tam Naczelnik cię wypisze i dostaniesz swoje rzeczy.
+NPC - Idź prosto do niego, nie chciałbym cię tu znaleźć.
+NPC - Rozumiemy się?
+
+-- where --
+Hero - Gdzie dokładnie mam iść?
+NPC - Głuchy jesteś?
+NPC - Korytarzem i po schodach.
+NPC - Patrz przed siebie i nie rozmawiaj z innymi więźniami. Jasne?

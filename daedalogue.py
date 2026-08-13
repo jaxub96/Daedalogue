@@ -18,19 +18,9 @@ from PyQt6.QtGui import QColor, QPalette
 from theme import THEME, SS, DaedalusHighlighter, mono_font
 from daedalus_gen import (
     DialogBlock, sanitize, export_block_name,
-    generate_dia_file, generate_constants_file, export_plain_dialog, parse_dia_file,export_followup_name
+    generate_dia_file, generate_constants_file, export_plain_dialog, parse_dia_file,
+    parse_plain_dialog, export_followup_name
 )
-
-
-def _read_text_with_fallbacks(raw_bytes: bytes) -> str:
-    for encoding in ("utf-8", "cp1250", "cp1252", "latin-1"):
-        try:
-            text = raw_bytes.decode(encoding)
-        except UnicodeDecodeError:
-            continue
-        if "�" not in text and "\ufffd" not in text:
-            return text
-    return raw_bytes.decode("utf-8", errors="replace")
 from widgets import BlockEditor, BlockListItem
 
 
@@ -90,14 +80,11 @@ class MainWindow(QMainWindow):
         text_btn = flat_btn("Export Text")
         text_btn.clicked.connect(self._export_text)
 
-        reset_btn = flat_btn("Reset")
-        reset_btn.setStyleSheet(
-            f"QPushButton {{ background:{THEME['bg_panel']}; color:{THEME['accent_hover']}; "
-            f"border:{THEME['border_width']} solid {THEME['bg_border']}; "
-            f"border-radius:{THEME['radius_md']}; padding:6px 14px; font-weight:600; }}"
-            f"QPushButton:hover {{ background:{THEME['accent_primary']}; color:{THEME['bg_main']}; }}")
-        reset_btn.setToolTip("Clear the NPC name/ID and every scene")
-        reset_btn.clicked.connect(self._reset)
+        import_btn = flat_btn("Import Text")
+        import_btn.clicked.connect(self._import_text)
+
+        reset_btn = flat_btn("New")
+        reset_btn.clicked.connect(self._new_project)
 
         save_btn = QPushButton("Save")
         save_btn.setStyleSheet(
@@ -111,15 +98,13 @@ class MainWindow(QMainWindow):
         tb.addWidget(title); tb.addWidget(sep); tb.addStretch()
         tb.addWidget(hdr_lbl("NPC Name")); tb.addWidget(self.npc_name_edit)
         tb.addWidget(hdr_lbl("NPC ID"));   tb.addWidget(self.npc_id_edit)
-        tb.addWidget(open_btn); tb.addWidget(text_btn); tb.addWidget(reset_btn); tb.addWidget(save_btn)
+        tb.addWidget(open_btn); tb.addWidget(import_btn); tb.addWidget(text_btn); tb.addWidget(reset_btn); tb.addWidget(save_btn)
         root.addWidget(topbar)
 
         splitter = QSplitter(Qt.Orientation.Horizontal); splitter.setHandleWidth(2)
 
-        # Sidebar — resizable, but kept within sane bounds via the splitter
-        left = QWidget()
-        left.setMinimumWidth(140)
-        left.setMaximumWidth(420)
+        # Sidebar
+        left = QWidget(); left.setFixedWidth(THEME["sidebar_width"])
         left.setStyleSheet(f"QWidget {{ background:{THEME['bg_panel']}; }}")
         lv = QVBoxLayout(left); lv.setContentsMargins(6, 10, 6, 8); lv.setSpacing(4)
 
@@ -180,17 +165,13 @@ class MainWindow(QMainWindow):
 
         self.dia_preview = QTextEdit(); self.dia_preview.setReadOnly(True); self.dia_preview.setFont(mono_font())
         self.dia_preview.setStyleSheet(
-            f"QTextEdit {{ background:{THEME['bg_panel']}; color:{THEME['text_primary']}; "
+            f"QTextEdit {{ background:{THEME['bg_code']}; color:{THEME['text_primary']}; "
             f"border:none; padding:10px; }}")
         DaedalusHighlighter(self.dia_preview.document())
         pv.addWidget(self.dia_preview)
 
         splitter.addWidget(preview_panel)
         splitter.setSizes(THEME["splitter_sizes"])
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
-        splitter.setStretchFactor(2, 1)
-        splitter.setChildrenCollapsible(False)
         root.addWidget(splitter, 1)
 
         self.npc_name_edit.textChanged.connect(self._refresh_preview)
@@ -220,14 +201,6 @@ class MainWindow(QMainWindow):
             cur = cur.parent_block
         return False
 
-    def _depth_for_block(self, block):
-        depth = 0
-        cur = block.parent_block
-        while cur is not None:
-            depth += 1
-            cur = cur.parent_block
-        return max(depth - 1, 0)
-
     def _add_block(self, block=None, parent_idx=None):
         b = block if block is not None else DialogBlock()
         insert_pos = self._find_insert_pos_after(parent_idx) if parent_idx is not None else len(self.blocks)
@@ -239,9 +212,8 @@ class MainWindow(QMainWindow):
         self.block_editors.insert(insert_pos, ed)
         self.editor_stack.addWidget(ed)
 
-        depth = self._depth_for_block(b)
         item = BlockListItem(insert_pos, b.name, on_select=self._select_block,
-                              on_remove=self._remove_block, is_followup=b.is_followup, depth=depth)
+                              on_remove=self._remove_block, is_followup=b.is_followup)
         self.block_items.insert(insert_pos, item)
         self.block_list_layout.insertWidget(insert_pos, item)
         self._reindex()
@@ -347,10 +319,7 @@ class MainWindow(QMainWindow):
             if b.is_followup:
                 parent_bn = b.parent_block.func_name if b.parent_block.is_followup \
                     else export_block_name(ni, b.parent_block.name)
-                # Preserve existing function names when opening/parsing files.
-                # Only generate a new follow-up name if none is set (empty string).
-                if not getattr(b, "func_name", ""):
-                    b.func_name = export_followup_name(parent_bn, b.name)
+                b.func_name = export_followup_name(parent_bn, b.name)
         for ed in self.block_editors:
             for cw in ed.get_choice_widgets():
                 if cw.linked_block is not None:
@@ -392,12 +361,55 @@ class MainWindow(QMainWindow):
             f.write(export_plain_dialog(bl))
         QMessageBox.information(self, "Exported", f"Dialog reference text saved:\n  {path}")
 
+    def _import_text(self):
+        """Drop in a plain 'Speaker - line' text file (the same format
+        Export Text writes) and turn it straight into scenes in the editor,
+        then immediately write the resulting .d file too."""
+        path, _ = QFileDialog.getOpenFileName(self, "Import Plain Dialog Text", "", "Text Files (*.txt)")
+        if not path: return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+            blocks = parse_plain_dialog(text)
+        except Exception as e:
+            QMessageBox.critical(self, "Could Not Import File", f"This file could not be read:\n{e}")
+            return
+        if not blocks:
+            QMessageBox.information(
+                self, "Nothing Found",
+                "No dialog lines were found in that file.\nExpected format:\n\n"
+                "-- Scene Name --\nNPC - line\nHero - line")
+            return
+
+        for b in blocks:
+            self._add_block(b)   # each one lands in the editor as real chat bubbles
+
+        nn = self.npc_name_edit.text().strip()
+        ni = self.npc_id_edit.text().strip()
+        if not nn or not ni:
+            QMessageBox.information(
+                self, "Imported",
+                f"Added {len(blocks)} scene(s). Set NPC Name/ID and press Save to also write the .d file.")
+            return
+
+        bl = self._collect_blocks()
+        default = self.current_file_path or f"DIA_{sanitize(ni)}.d"
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Dialog File", default, "Daedalus Dialog Files (*.d)")
+        if not save_path:
+            QMessageBox.information(self, "Imported", f"Added {len(blocks)} scene(s). Not saved to a .d file yet.")
+            return
+        with open(save_path, "w", encoding="utf-8") as f:
+            f.write(generate_dia_file(nn, ni, bl))
+        self.current_file_path = save_path
+        self.setWindowTitle(f"Gothic Dialog Generator — {os.path.basename(save_path)}")
+        QMessageBox.information(self, "Imported & Saved", f"Added {len(blocks)} scene(s) and saved:\n  {save_path}")
+
     def _open(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open Dialog File", "", "Daedalus Dialog Files (*.d)")
         if not path: return
         try:
-            raw = open(path, "rb").read()
-            text = _read_text_with_fallbacks(raw)
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
             npc_name, npc_id, blocks = parse_dia_file(text)
         except Exception as e:
             QMessageBox.critical(self, "Could Not Open File", f"This file could not be read:\n{e}")
@@ -406,19 +418,15 @@ class MainWindow(QMainWindow):
         self.current_file_path = path
         self.setWindowTitle(f"Gothic Dialog Generator — {os.path.basename(path)}")
 
-    def _reset(self):
-        has_content = bool(
-            self.blocks or self.npc_name_edit.text().strip() or self.npc_id_edit.text().strip()
-        )
-        if has_content:
-            resp = QMessageBox.question(
-                self,
-                "Reset Everything",
-                "This clears the NPC name/ID and every scene. This cannot be undone.\n\nContinue?",
+    def _new_project(self):
+        if self.blocks or self.npc_name_edit.text().strip() or self.npc_id_edit.text().strip():
+            confirm = QMessageBox.question(
+                self, "Start New Dialog",
+                "This clears the NPC name/ID and every scene in the editor.\n"
+                "Anything not saved will be lost. Continue?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            if resp != QMessageBox.StandardButton.Yes:
+                QMessageBox.StandardButton.No)
+            if confirm != QMessageBox.StandardButton.Yes:
                 return
         self._load_project("", "", [])
         self.current_file_path = None

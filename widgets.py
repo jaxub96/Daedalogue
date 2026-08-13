@@ -504,6 +504,7 @@ class ChatLinesWidget(QWidget):
         root.addWidget(self.effect_row)
 
         self._update_speaker_style()
+        
 
     def _toggle_speaker(self):
         self.current_speaker = "other" if self.current_speaker == "self" else "self"

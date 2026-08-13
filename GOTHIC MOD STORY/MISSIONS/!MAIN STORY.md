@@ -16,24 +16,24 @@ tags:
 		- +1 to [[MORALITY]]
 	- No, I don't know you
 		- -1 to [[MORALITY]]
->[!TIP] [[FAVOR]]
-- [[Arideus]] takes you to commander [[Malachus]]
-- [[Malachus]] signs you off, gives back your inventory
+>[!TIP] [[FAVOR4FAVOR]]
+- [[Arideus]] takes you to commander [[NPC/Malachus]]
+- [[NPC/Malachus]] signs you off, gives back your inventory
 - get a [[dagger]], some gold and a [[mysterious note]]
 
 > [!TIP] [[MYSTERY_GIFT]]
 
-- ask [[Malachus]] about items:
+- ask [[NPC/Malachus]] about items:
 	- "Yes they are mine" (lie)
 		- -1 to [[MORALITY]]
 		- you claim the items
 	- "These items aren't mine" (true)
 		- +1 to [[MORALITY]]
 		- ask about items
-		- [[Malachus]] says they are under your name
+		- [[NPC/Malachus]] says they are under your name
 		- not his business.
 		- suggests to sell [[dagger]], or donate to Temple
-- *[[Malachus]]* directs you to a nearby **[[SICCA_TEMPLE]]** for work/shelter
+- *[[NPC/Malachus]]* directs you to a nearby **[[SICCA_TEMPLE]]** for work/shelter
 ## **[[ROAD]]**
 - A robber named *[[Persius]]* stops you, and tries to rob you of the [[dagger]]
     - give [[dagger]]
@@ -68,7 +68,7 @@ HERO:
 "What happened to the harvesters?"
 
 Nestor:
-"Some were destroyed by the Mage Counsel, others have gone missing. If this dagger really is a harvester, it should be destroyed at once."
+"Some were destroyed by the Mage Council, others have gone missing. If this dagger really is a harvester, it should be destroyed at once."
 
 HERO: 
 "What does that have to do with me?"
@@ -86,19 +86,30 @@ HERO:
 "Then what should I do? Can I leave it to you?"
 
 Nestor:
-"Absolutely kurwa not. I can't let the dagger corrupt the sacred temple of Sicca. Take it to the Court Wizard, [[Lazarus]]. As a member of the Mage Counsel, he will know what to do."
-
-
+"Absolutely kurwa not. I can't let the dagger corrupt the sacred temple of Sicca. Take it to the Court Wizard, [[Lazarus]]. As a member of the Mage Council, he will know what to do."
 
 >[!tip] [[WIZARD'S COUNSEL]]
 
 assigns [[CULT_DUNGEON]] if not done.
 
-Sends you to the **[[CITY]]** to be recruited to the [[CUSTODIAN]]
-
-
+Sends you to the **[[CITY]]** to be recruited.
 
 ## **[[CITY]]**
+
+- [[Lazarus]] resides in the castle
+- to get there, you need to request audience. For that, you will need a good reason.
+- Talk to the [[City Watch]], they will explain everything to you.
+
+
+> [!tip] [[CITY ACCESS]]
+> Gain access to the court.
+
+
+## [[COURT]]
+
+
+
+
 the [[CUSTODIAN]] are looking for volunteer workers to hunt the [[Cultists]]
 you can join if you're strong enough.
 First mission - interrogate a captured cultist about their hideout.

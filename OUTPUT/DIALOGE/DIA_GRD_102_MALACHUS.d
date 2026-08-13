@@ -53,27 +53,27 @@ FUNC VOID DIA_GRD_102_MALACHUS_DISCHARGE_Info()
 	B_GiveInvItems (self, hero, ItWr_MysteriousLetter_Mod, 1);
 	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_10_05"); //Sprawdź czy wszystko się zgadza. Później nie będę słuchał skarg.
 	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_10_06"); //A teraz znikaj. I postaraj się tu nie wracać.
-	Info_AddChoice	(DIA_GRD_102_MALACHUS_DISCHARGE,"Zgadza się.",DIA_GRD_102_MALACHUS_DISCHARGE_MINE);
-	Info_AddChoice	(DIA_GRD_102_MALACHUS_DISCHARGE,"To nie moje...",DIA_GRD_102_MALACHUS_DISCHARGE_NOTMINE);
+	Info_AddChoice	(DIA_GRD_102_MALACHUS_DISCHARGE,"Zgadza się.",DIA_GRD_102_MALACHUS_DISCHARGE_Zgadza_si__);
+	Info_AddChoice	(DIA_GRD_102_MALACHUS_DISCHARGE,"To nie moje...",DIA_GRD_102_MALACHUS_DISCHARGE_To_nie_moje___);
 };
 
-func void DIA_GRD_102_MALACHUS_DISCHARGE_MINE()
+func void DIA_GRD_102_MALACHUS_DISCHARGE_Zgadza_si__()
 {
-	AI_Output (other, self,"DIA_GRD_102_MALACHUS_DISCHARGE_MINE_15_00"); //Zgadza się.
-	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_MINE_10_01"); //Dobrze. Podpisz tutaj.
+	AI_Output (other, self,"DIA_GRD_102_MALACHUS_DISCHARGE_Zgadza_si___15_00"); //Wszystko się zgadza.
+	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_Zgadza_si___10_01"); //Dobrze. Podpisz tutaj.
 	Log_CreateTopic	(FREEDOM, LOG_MISSION);
 	Log_SetTopicStatus	(FREEDOM, LOG_RUNNING);
 	B_LogEntry	(FREEDOM,"Oddano mi rzeczy które nie są moje. Nie protestowałem. Nikt raczej nie będzie za nimi tęsknił");
 	Info_ClearChoices	(DIA_GRD_102_MALACHUS_DISCHARGE);
 };
 
-func void DIA_GRD_102_MALACHUS_DISCHARGE_NOTMINE()
+func void DIA_GRD_102_MALACHUS_DISCHARGE_To_nie_moje___()
 {
-	AI_Output (other, self,"DIA_GRD_102_MALACHUS_DISCHARGE_NOTMINE_15_00"); //To nie są moje rzeczy.
-	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_NOTMINE_10_01"); //Czyżby?
-	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_NOTMINE_10_02"); //Są zarejestrowane na ciebie. A to jedyne co mnie interesuje.
-	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_NOTMINE_10_03"); //Zrób z nimi co chcesz. Tutaj nikt nie będzie ich szukał.
-	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_NOTMINE_10_04"); //Podpisz tutaj.
+	AI_Output (other, self,"DIA_GRD_102_MALACHUS_DISCHARGE_To_nie_moje____15_00"); //To nie są moje rzeczy.
+	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_To_nie_moje____10_01"); //Czyżby?
+	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_To_nie_moje____10_02"); //Są zarejestrowane na ciebie. A to jedyne co mnie interesuje.
+	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_To_nie_moje____10_03"); //Zrób z nimi co chcesz. Tutaj nikt nie będzie ich szukał.
+	AI_Output (self, other,"DIA_GRD_102_MALACHUS_DISCHARGE_To_nie_moje____10_04"); //Podpisz tutaj.
 	Log_CreateTopic	(FREEDOM, LOG_MISSION);
 	Log_SetTopicStatus	(FREEDOM, LOG_RUNNING);
 	B_LogEntry	(FREEDOM,"Oddano mi rzeczy które nie są moje. Kapitan MALACHUS nalegał abym je wziął mimo to.");

@@ -53,6 +53,8 @@ FUNC VOID DIA_GRD_100_ARIDEUS_freedom_Info()
 	Log_CreateTopic	(FREEDOM, LOG_NOTE);
 	Log_SetTopicStatus	(FREEDOM, LOG_NOTE);
 	B_LogEntry	(FREEDOM,"Zwolniono mnie z aresztu, ale Strażnik ARIDEUS nie zdradził mi powodu. Tak czy siak, wychodzę na wolność.");
+	Npc_ExchangeRoutine(self, "PLACEHOLDER_ROUTINE");
+	AI_StopProcessInfos	(self);
 };
 
 // ============================================================
@@ -75,11 +77,12 @@ FUNC int DIA_GRD_100_ARIDEUS_discharge_Condition()
 
 FUNC VOID DIA_GRD_100_ARIDEUS_discharge_Info()
 {
-	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_00"); //Tutaj się rozstajemy.
+	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_00"); //Dalej pójdziesz sam.
 	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_01"); //Tylko się nie rozczulaj. Może jeszcze tu wrócisz!
-	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_02"); //A teraz idź dalej korytarzem i schodami do góry.
-	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_03"); //Tam Kapitan Falk cię wypisze i odda ci twoje rzeczy.
-	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_04"); //Tylko nie próbuj kręcić się po korytarzach, bo zaciągnę cię z powrotem do celi!
+	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_02"); //Teraz idź korytarzem i po schodach do góry.
+	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_03"); //Tam Naczelnik cię wypisze i dostaniesz swoje rzeczy.
+	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_04"); //Idź prosto do niego, nie chciałbym cię tu znaleźć.
+	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_discharge_10_05"); //Rozumiemy się?
 	AI_StopProcessInfos	(self);
 };
 
@@ -92,7 +95,7 @@ instance DIA_GRD_100_ARIDEUS_where (C_INFO)
 	nr			= 3;
 	condition	= DIA_GRD_100_ARIDEUS_where_Condition;
 	information	= DIA_GRD_100_ARIDEUS_where_Info;
-	permanent	= 0;
+	permanent	= 1;
 	description	= "Dokąd mam iść?";
 };
 
@@ -105,7 +108,7 @@ FUNC VOID DIA_GRD_100_ARIDEUS_where_Info()
 {
 	AI_Output (other, self,"DIA_GRD_100_ARIDEUS_where_15_00"); //Gdzie dokładnie mam iść?
 	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_where_10_01"); //Głuchy jesteś?
-	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_where_10_02"); //Korytarzem do końca i po schodach.
-	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_where_10_03"); //Patrz przed siebie i z nikim nie rozmawiaj. Jasne?
+	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_where_10_02"); //Korytarzem i po schodach.
+	AI_Output (self, other,"DIA_GRD_100_ARIDEUS_where_10_03"); //Patrz przed siebie i nie rozmawiaj z innymi więźniami. Jasne?
 	AI_StopProcessInfos	(self);
 };
