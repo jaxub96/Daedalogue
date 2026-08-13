@@ -1,6 +1,6 @@
 ---
 tags:
   - NPC
-PLACE: "[[PRISON]]"
+PLACE: "[[GROMAZ FORTRESS]]"
 GUILD: "[[GUARD]]"
 ---

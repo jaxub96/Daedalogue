@@ -4,12 +4,12 @@ tags:
 ---
 # Chapter 1
 
-## **[[PRISON]]**
+## **[[GROMAZ FORTRESS]]**
 
 - [[HERO]] wakes up in a prison cell.
 - guard *[[Arideus]]* comes to your cell.
 - choose face, head, body, name.
-- exit [[PRISON]] dungeon.
+- exit [[GROMAZ FORTRESS]] dungeon.
 - [[Kilian]] is a neighbour prisoner.
 - Calls you out when you exit. Asks if you can vouch for his release
 	- Yes, I will try 
@@ -46,7 +46,7 @@ tags:
         - find a [[clue]] on his body
 > [!NOTE] [[MYSTERY_GIFT]]
 
-- walk the road from **[[PRISON]]**
+- walk the road from **[[GROMAZ FORTRESS]]**
 - eventually find **[[SICCA_TEMPLE]]**
 - temple guard *[[Varus]]* stops you
 >[!TIP] [[TEMPLE_ENTRY]]

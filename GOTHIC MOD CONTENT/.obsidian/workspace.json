@@ -22,35 +22,8 @@
               "icon": "lucide-file",
               "title": "!MAIN STORY"
             }
-          },
-          {
-            "id": "a1fb71b9b8fe3ada",
-            "type": "leaf",
-            "pinned": true,
-            "state": {
-              "type": "graph",
-              "state": {},
-              "pinned": true,
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
-            }
-          },
-          {
-            "id": "7871be07438f43b1",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "MISSIONS/!MAIN STORY.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "!MAIN STORY"
-            }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
@@ -214,14 +187,28 @@
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
-      "bases:Create new base": false,
-      "colorful-folders:Toggle stealth mode": false
+      "bases:Create new base": false
     }
   },
-  "active": "7871be07438f43b1",
+  "active": "88972c6d88adef46",
   "lastOpenFiles": [
-    "Untitled.md",
+    "CUSTODIAN.md",
+    "NPC/Solomon.md",
+    "NPC/HERO.md",
+    "NPC/Kilian.md",
+    "NPC/Loras.md",
+    "PLACES/SANCTUARY.md",
+    "NPC/Untitled.md",
+    "Antagonist.md",
+    "PLACES/ROAD.md",
+    "PLACES/NIDAROS.md",
+    "PLACES/NIDAROS.md",
+    "PLACES/GROMAZ FORTRESS.md",
     "MISSIONS/!MAIN STORY.md",
+    "NPC/Arideus.md",
+    "BLENDER/blender addons.md",
+    "BLENDER",
+    "Untitled 1.md",
     "SKILLS/SOUL INFUSION.md",
     "SKILLS/SKINNING.md",
     "TEMPLATES/mission.md",
@@ -234,20 +221,6 @@
     "Cultists.md",
     "NPC/Lazarus.md",
     "GUILDS/MAGE.md",
-    "NPC/Cultist.md",
-    "NPC/Arideus.md",
-    "GUILDS/CUSTODIAN.md",
-    "NPC/Ayoub.md",
-    "NPC/HERO.md",
-    "NPC/Zakarias.md",
-    "ITEMS/gabriel_journal.md",
-    "MISSIONS/TEMPLE_WORK.md",
-    "NPC/Loras.md",
-    "NPC/Malachus.md",
-    "NPC/Nestor.md",
-    "NPC/Varus.md",
-    "GUILDS/TEMPLAR.md",
-    "GUILDS/PRIEST.md",
     "TEMPLATES",
     "GUILDS",
     "CONCEPTS",
