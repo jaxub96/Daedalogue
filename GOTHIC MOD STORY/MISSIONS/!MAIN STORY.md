@@ -2,6 +2,9 @@
 tags:
   - MISSION
 ---
+# Setting 
+[[INTRO]]
+
 # Chapter 1
 
 ## **[[GROMAZ FORTRESS]]**

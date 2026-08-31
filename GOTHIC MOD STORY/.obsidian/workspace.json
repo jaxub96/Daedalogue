@@ -15,30 +15,15 @@
               "type": "markdown",
               "state": {
                 "file": "MISSIONS/!MAIN STORY.md",
-                "mode": "preview",
+                "mode": "source",
                 "source": false
               },
               "pinned": true,
               "icon": "lucide-file",
               "title": "!MAIN STORY"
             }
-          },
-          {
-            "id": "40a518f64d4a0c6e",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "ITEMS/gabriel_journal.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "gabriel_journal"
-            }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -205,12 +190,19 @@
       "bases:Create new base": false
     }
   },
-  "active": "40a518f64d4a0c6e",
+  "active": "88972c6d88adef46",
   "lastOpenFiles": [
+    "INTRO.md",
+    "MISSIONS/!MAIN STORY.md",
+    "CONCEPTS/CULTURE AND BELIEF.md",
+    "PLACES/names.md",
+    "PLACES/NIDA ROS.md",
+    "Antagonist.md",
+    "PLACES/ZAGAROTA.md",
+    "ITEMS/gabriel_journal.md",
     "ITEMS/dagger.md",
     "ITEMS/clues.md",
     "ITEMS/clue.md",
-    "MISSIONS/!MAIN STORY.md",
     "NPC/Arideus.md",
     "NPC/Cultist.md",
     "NPC/Falek.md",
@@ -226,13 +218,6 @@
     "NPC/Solomon.md",
     "PLACES/CITY.md",
     "PLACES/WOODS.md",
-    "PLACES/SICCA_TEMPLE.md",
-    "PLACES/SANCTUARY.md",
-    "PLACES/ROAD.md",
-    "PLACES/NIDAROS.md",
-    "PLACES/GROMAZ FORTRESS.md",
-    "PLACES/DUNGEON.md",
-    "TEMPLATES/mission.md",
     "BLENDER",
     "NEWTAG",
     "SKILLS",
