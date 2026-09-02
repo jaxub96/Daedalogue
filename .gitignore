@@ -22,3 +22,5 @@ env/
 REFERENCE/
 GOTHIC MOD STORY/.obsidian/workspace.json
 GOTHIC MOD STORY/.obsidian/
+
+*.DS_Store
