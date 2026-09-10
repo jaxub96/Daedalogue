@@ -1,7 +1,7 @@
 [[MEZANTIUM]]
 [[SALOMON]] — obecna dynastia cesarska
 [[TOLEMY]] — dawna dynastia
-[[NIDA ROS]] — północne królestwo
+[[NIDAROS]] — północne królestwo
 [[EMBRA]] — północny lud
 [[ELVA ROS]] — zachodnie królestwo
 [[KAFU]] — wielkie miasto portowe
