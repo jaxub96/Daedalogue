@@ -24,3 +24,5 @@ GOTHIC MOD STORY/.obsidian/workspace.json
 GOTHIC MOD STORY/.obsidian/
 
 *.DS_Store
+# Story notes live outside the repo
+GOTHIC MOD STORY/

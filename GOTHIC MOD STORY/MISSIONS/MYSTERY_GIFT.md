@@ -1,5 +1,0 @@
----
-tags: MISSION
-EXP: EXP_CONSTANT
-REWARD: REWARD
----
